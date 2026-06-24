@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Cotiz CTZ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1a6dad;
+    --blue-dark: #145a91;
+    --blue-light: #e8f2fb;
+    --yellow: #fff8e1;
+    --yellow-border: #f0c830;
+    --gray: #f5f6f8;
+    --gray2: #e8eaed;
+    --text: #1a1a2e;
+    --text2: #555;
+    --red: #d63031;
+    --green: #00897b;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(26,109,173,0.10);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f0f4f8;
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  header {
+    background: var(--blue);
+    color: white;
+    padding: 16px 20px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  header .logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  header .logo-dot { color: #7ecfff; }
+  header .sub { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+
+  .container { max-width: 520px; margin: 0 auto; padding: 16px; }
+
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--blue);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-title span { font-size: 16px; }
+
+  label { font-size: 13px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 5px; }
+
+  input, select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--gray2);
+    border-radius: 8px;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--gray);
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--blue);
+    background: white;
+  }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+
+  /* TC + condición */
+  .tc-row { display: flex; gap: 10px; align-items: flex-end; }
+  .tc-row .field { flex: 1; margin-bottom: 0; }
+  .tc-badge {
+    background: var(--blue-light);
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 11px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  /* Buscador producto */
+  .search-wrap { position: relative; }
+  .search-wrap input { padding-left: 36px; }
+  .search-icon {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px; pointer-events: none;
+  }
+  .dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: white;
+    border: 1.5px solid var(--blue);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 200;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    display: none;
+  }
+  .dropdown.open { display: block; }
+  .dropdown-item {
+    padding: 11px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--gray2);
+    transition: background 0.15s;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover, .dropdown-item.active { background: var(--blue-light); }
+  .dropdown-item .item-code { font-size: 11px; font-weight: 700; color: var(--blue); }
+  .dropdown-item .item-desc { font-size: 13px; color: var(--text); margin-top: 2px; line-height: 1.3; }
+  .dropdown-item .item-price { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 2px; }
+
+  /* Agregar item */
+  .add-row { display: grid; grid-template-columns: 1fr 80px; gap: 10px; margin-top: 12px; }
+  .selected-product {
+    background: var(--blue-light);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    display: none;
+  }
+  .selected-product.show { display: block; }
+  .selected-product .sp-code { font-size: 11px; font-weight: 700; color: var(--blue); }
+  .selected-product .sp-desc { font-size: 13px; color: var(--text); margin-top: 2px; }
+  .selected-product .sp-price { font-size: 13px; color: var(--green); font-weight: 600; margin-top: 3px; }
+
+  .btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary { background: var(--blue); color: white; width: 100%; margin-top: 12px; padding: 14px; font-size: 16px; border-radius: 10px; }
+  .btn-primary:active { background: var(--blue-dark); transform: scale(0.98); }
+  .btn-add { background: var(--blue); color: white; }
+  .btn-add:active { background: var(--blue-dark); }
+  .btn-danger { background: #fff0f0; color: var(--red); border: 1px solid #ffc8c8; padding: 6px 10px; font-size: 13px; border-radius: 6px; }
+
+  /* Lista items */
+  .items-list { display: flex; flex-direction: column; gap: 10px; }
+  .item-card {
+    background: var(--gray);
+    border-radius: 10px;
+    padding: 13px 14px;
+    border-left: 3px solid var(--blue);
+  }
+  .item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .item-code { font-size: 11px; font-weight: 700; color: var(--blue); }
+  .item-desc { font-size: 13px; color: var(--text); margin-top: 3px; line-height: 1.35; }
+  .item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .item-detail { font-size: 12px; color: var(--text2); }
+  .item-total { font-size: 14px; font-weight: 700; color: var(--text); }
+
+  .empty-items {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text2);
+    font-size: 14px;
+  }
+  .empty-items .emoji { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  /* Totales */
+  .totals-box { background: var(--gray); border-radius: 10px; overflow: hidden; }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--gray2);
+    font-size: 14px;
+  }
+  .total-row:last-child { border-bottom: none; }
+  .total-row.highlight {
+    background: var(--yellow);
+    border-top: 2px solid var(--yellow-border);
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .total-label { color: var(--text2); }
+  .total-value { font-weight: 600; color: var(--text); }
+  .highlight .total-label, .highlight .total-value { color: var(--text); }
+
+  .recargo-badge {
+    background: #fff3e0;
+    border: 1px solid #ffcc02;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #e65100;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .recargo-badge.show { display: block; }
+
+  .no-items-msg {
+    text-align: center;
+    color: var(--text2);
+    font-size: 14px;
+    padding: 16px 0;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #222;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 999;
+    transition: transform 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Custom price input */
+  .custom-price-row {
+    margin-top: 8px;
+    display: none;
+  }
+  .custom-price-row.show { display: block; }
+  .custom-price-row input { background: #fffde7; border-color: var(--yellow-border); }
+
+  select option { font-size: 15px; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="data:image/jpeg;base64,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" style="height:38px;width:auto;object-fit:contain;" alt="Conectorizar">
+</header>
+
+<div class="container">
+
+  <!-- CLIENTE -->
+  <div class="card">
+    <div class="card-title"><span>👤</span> Datos del cliente</div>
+    <div class="field">
+      <label>Nombre / Razón social</label>
+      <div class="search-wrap cli-search-wrap" style="position:relative">
+        <span class="search-icon">👤</span>
+        <input type="text" id="cli-nombre" placeholder="Buscá o escribí el nombre..." autocomplete="off" oninput="buscarCliente()" style="padding-left:36px">
+        <div class="dropdown" id="cli-dropdown"></div>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>CUIT</label>
+        <input type="text" id="cli-cuit" placeholder="30-00000000-0">
+      </div>
+      <div class="field">
+        <label>Sit. IVA</label>
+        <select id="cli-iva">
+          <option>Responsable Inscripto</option>
+          <option>Consumidor Final</option>
+          <option>Monotributista</option>
+          <option>Exento</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Dirección</label>
+      <input type="text" id="cli-dir" placeholder="Calle y número">
+    </div>
+    <div class="field">
+      <label>Localidad</label>
+      <input type="text" id="cli-loc" placeholder="Ciudad - Provincia">
+    </div>
+    <button class="btn" onclick="guardarClienteActual()" style="background:#e8f2fb;color:#1a6dad;border:1.5px solid #1a6dad;width:100%;margin-top:4px;font-size:14px;padding:10px;">
+      💾 Guardar cliente
+    </button>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="card">
+    <div class="card-title"><span>⚙️</span> Configuración</div>
+    <div class="row2">
+      <div class="field">
+        <label>Tipo de cambio (U$S)</label>
+        <input type="number" id="tc" value="1490" min="1">
+      </div>
+      <div class="field">
+        <label>N° Cotización</label>
+        <input type="text" id="nro-cot" placeholder="0001-00000897">
+      </div>
+    </div>
+    <div class="field">
+      <label>Condición de pago</label>
+      <select id="cond-pago" onchange="toggleRecargo()">
+        <option value="contado">Contado</option>
+        <option value="echeq">0-30-60 días con echeq (+5%)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- AGREGAR PRODUCTOS -->
+  <div class="card">
+    <div class="card-title"><span>🔍</span> Agregar producto</div>
+
+    <div class="field">
+      <label>Buscar por código o nombre</label>
+      <div class="search-wrap">
+        <span class="search-icon">🔎</span>
+        <input type="text" id="buscar" placeholder="Ej: FLE347, patch cord, cruz..." autocomplete="off" oninput="buscarProducto()" onkeydown="navDropdown(event)">
+        <div class="dropdown" id="dropdown"></div>
+      </div>
+    </div>
+
+    <div class="selected-product" id="selected-product">
+      <div class="sp-code" id="sp-code"></div>
+      <div class="sp-desc" id="sp-desc"></div>
+      <div class="sp-price" id="sp-price"></div>
+    </div>
+
+    <div class="custom-price-row" id="custom-price-row">
+      <label>Precio especial (U$S, sin IVA)</label>
+      <input type="number" id="custom-price" placeholder="Dejar vacío para usar precio de lista" step="0.01" min="0">
+    </div>
+
+    <div class="add-row">
+      <div class="field" style="margin-bottom:0">
+        <label>Cantidad</label>
+        <input type="number" id="cantidad" value="1" min="1" placeholder="1">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="btn btn-add" onclick="agregarItem()">＋ Agregar</button>
+      </div>
+    </div>
+
+    <!-- Separador -->
+    <div style="text-align:center;margin:14px 0 10px;color:#aaa;font-size:12px;">
+      ── o bien, ingresá un ítem libre ──
+    </div>
+
+    <!-- Ítem manual -->
+    <div style="background:var(--gray);border-radius:10px;padding:14px;border:1.5px dashed #ccc;">
+      <div class="field" style="margin-bottom:10px">
+        <label>Descripción libre</label>
+        <input type="text" id="manual-desc" placeholder="Ej: Mano de obra, flete, etc.">
+      </div>
+      <div class="row3">
+        <div class="field" style="margin-bottom:0">
+          <label>Precio (U$S)</label>
+          <input type="number" id="manual-precio" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>IVA %</label>
+          <select id="manual-iva">
+            <option value="21">21%</option>
+            <option value="10.5">10,5%</option>
+            <option value="0">0%</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Cant.</label>
+          <input type="number" id="manual-cant" value="1" min="1">
+        </div>
+      </div>
+      <button class="btn btn-add" onclick="agregarItemManual()" style="width:100%;margin-top:10px;">＋ Agregar ítem libre</button>
+    </div>
+  </div>
+
+  <!-- ITEMS -->
+  <div class="card">
+    <div class="card-title"><span>📋</span> Ítems de la cotización</div>
+    <div class="items-list" id="items-list">
+      <div class="empty-items">
+        <span class="emoji">📦</span>
+        Todavía no agregaste productos
+      </div>
+    </div>
+  </div>
+
+  <!-- TOTALES -->
+  <div class="card">
+    <div class="card-title"><span>💰</span> Totales</div>
+    <div class="recargo-badge" id="recargo-badge">⚡ Precio con recargo 5% echeq incluido</div>
+    <div class="totals-box" id="totals-box">
+      <div class="no-items-msg">Agregá productos para ver los totales</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="generarPDF()">
+    ⬇️ Descargar PDF
+  </button>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== LISTA DE PRECIOS =====================
+const productos = [
+  // Cables F.O. - IVA 10.5%
+  {cod:"FO2480",  desc:"CABLE FIBRA OPTICA 24 CORES SM ADSS G652D VANO 80MTS - BOBINA 2000M",   precio:881.82,  iva:10.5, cat:"Cables F.O."},
+  {cod:"FO24100", desc:"CABLE FIBRA OPTICA 24 CORES SM ADSS G652D VANO 100MTS - BOBINA 4000M",  precio:1573.20, iva:10.5, cat:"Cables F.O."},
+  {cod:"FO24120", desc:"CABLE FIBRA OPTICA 24 CORES SM ADSS G652D VANO 120MTS - BOBINA 4000M",  precio:1987.20, iva:10.5, cat:"Cables F.O."},
+  {cod:"FO4880",  desc:"CABLE FIBRA OPTICA 48 CORES SM ADSS G652D VANO 80MTS - BOBINA 2000M",   precio:1109.52, iva:10.5, cat:"Cables F.O."},
+  {cod:"FO481004",desc:"CABLE FIBRA OPTICA 48 CORES SM ADSS G652D VANO 100MTS - BOBINA 4000M",  precio:2219.04, iva:10.5, cat:"Cables F.O."},
+  {cod:"FO96802", desc:"CABLE FIBRA OPTICA 96 CORES SM ADSS G652D VANO 80MTS - BOBINA 2000M",   precio:1925.10, iva:10.5, cat:"Cables F.O."},
+  {cod:"FO14480", desc:"CABLE FIBRA OPTICA 144 CORES SM ADSS G652D VANO 80MTS - BOBINA 4000M",  precio:6084.00, iva:10.5, cat:"Cables F.O."},
+  {cod:"FU6",     desc:"FIBRA UNITUBO 6 CORES - BOBINA 4000M VANO 80",                          precio:621.00,  iva:10.5, cat:"Cables F.O."},
+  {cod:"FU12",    desc:"FIBRA UNITUBO 12 CORES - BOBINA 2000M VANO 80",                         precio:447.12,  iva:10.5, cat:"Cables F.O."},
+  {cod:"FU12120", desc:"FIBRA UNITUBO 12 CORES - BOBINA 4000M VANO 120",                        precio:993.60,  iva:10.5, cat:"Cables F.O."},
+  {cod:"FU24",    desc:"FIBRA UNITUBO 24 CORES - BOBINA 2000M VANO 80",                         precio:616.86,  iva:10.5, cat:"Cables F.O."},
+  {cod:"FU24120", desc:"FIBRA UNITUBO 24 CORES - BOBINA 4000M VANO 120",                        precio:1258.56, iva:10.5, cat:"Cables F.O."},
+  {cod:"OVAL4",   desc:"DROP OVAL 4 CORES - BOBINA 2000M",                                      precio:273.24,  iva:10.5, cat:"Cables F.O."},
+  {cod:"OVAL6",   desc:"DROP OVAL 6 CORES - BOBINA 2000M",                                      precio:302.22,  iva:10.5, cat:"Cables F.O."},
+  {cod:"OVAL12",  desc:"DROP OVAL 12 CORES - BOBINA 2000M",                                     precio:393.30,  iva:10.5, cat:"Cables F.O."},
+  {cod:"DROP1",   desc:"CABLE DROP FIBRA OPTICA OUTDOOR SM 657A1 FRP 1 CORE",                   precio:38.19,   iva:10.5, cat:"Cables F.O."},
+  {cod:"PRE100",  desc:"DROP PRECON G657A2 FLAT 100 METROS",                                    precio:9.94,    iva:10.5, cat:"Cables F.O."},
+  {cod:"PRE60",   desc:"DROP PRECON G657A2 FLAT 60 METROS",                                     precio:7.66,    iva:10.5, cat:"Cables F.O."},
+  // Patch Cords - IVA 10.5%
+  {cod:"SASU2",   desc:"PATCH CORD 2M SC/APC SC/UPC",   precio:1.16, iva:10.5, cat:"Patch Cords"},
+  {cod:"SUSU2",   desc:"PATCH CORD 2M SC/UPC SC/UPC",   precio:1.16, iva:10.5, cat:"Patch Cords"},
+  {cod:"SASA2",   desc:"PATCH CORD 2M SC/APC SC/APC",   precio:1.16, iva:10.5, cat:"Patch Cords"},
+  {cod:"SAPC2",   desc:"PATCH CORD 2M SC/PC LC/PC",     precio:1.58, iva:10.5, cat:"Patch Cords"},
+  {cod:"LUSA2",   desc:"PATCH CORD 2M LC/PC SC/APC",    precio:1.89, iva:10.5, cat:"Patch Cords"},
+  {cod:"LULU2",   desc:"PATCH CORD 2M LC/PC LC/PC",     precio:1.47, iva:10.5, cat:"Patch Cords"},
+  {cod:"LUSU2",   desc:"PATCH CORD 2M LC/PC SC/UPC",    precio:1.58, iva:10.5, cat:"Patch Cords"},
+  {cod:"SASU3",   desc:"PATCH CORD 3M SC/APC SC/UPC",   precio:1.41, iva:10.5, cat:"Patch Cords"},
+  {cod:"SASA3",   desc:"PATCH CORD 3M SC/APC SC/APC",   precio:1.41, iva:10.5, cat:"Patch Cords"},
+  {cod:"SUSU3",   desc:"PATCH CORD 3M SC/UPC SC/UPC",   precio:1.41, iva:10.5, cat:"Patch Cords"},
+  {cod:"SASA5",   desc:"PATCH CORD 5M SC/APC",          precio:1.89, iva:10.5, cat:"Patch Cords"},
+  {cod:"SASU5",   desc:"PATCH CORD 5M SC/APC SC/UPC",   precio:1.60, iva:10.5, cat:"Patch Cords"},
+  {cod:"LULU5",   desc:"PATCH CORD 5M LC/PC LC/PC",     precio:1.98, iva:10.5, cat:"Patch Cords"},
+  {cod:"LULU12",  desc:"PATCH CORD 12M LC/PC LC/PC",    precio:2.99, iva:10.5, cat:"Patch Cords"},
+  {cod:"LUSA12",  desc:"PATCH CORD 12M LC/PC SC/APC",   precio:3.64, iva:10.5, cat:"Patch Cords"},
+  {cod:"LUSA15",  desc:"PATCH CORD 15M LC/PC SC/APC",   precio:4.10, iva:10.5, cat:"Patch Cords"},
+  // Splitters - IVA 10.5%
+  {cod:"SP-1X2-50/50",  desc:"SPLITTER 1X2 50/50 SIN CONECTOR",           precio:3.35, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X2-SC/APC", desc:"SPLITTER 1X2 CON CONECTOR SC/APC",          precio:4.78, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X4-1/1",    desc:"SPLITTER 1X4 SIN CONECTOR",                 precio:3.42, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X4-SC/APC", desc:"SPLITTER 1X4 CON CONECTOR SC/APC",          precio:6.10, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X8-1/1",    desc:"SPLITTER 1X8 SIN CONECTOR",                 precio:4.07, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X8-SC/APC", desc:"SPLITTER 1X8 CON CONECTOR SC/APC",          precio:6.51, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X16-1/1",   desc:"SPLITTER 1X16 SIN CONECTOR",                precio:4.47, iva:10.5, cat:"Splitters"},
+  {cod:"SP-1X16-SC/APC",desc:"SPLITTER 1X16 CON CONECTOR SC/APC",         precio:9.15, iva:10.5, cat:"Splitters"},
+  // Cajas / ODF - IVA 21%
+  {cod:"16",      desc:"CAJA DE DISTRIBUCION 2X16 SIN ADAPTADORES",                    precio:11.69,  iva:21, cat:"Cajas/ODF"},
+  {cod:"168A",    desc:"CAJA DISTRIBUCION 2X16 CON ADAPTADORES Y SPLITTER 1*8",        precio:14.71,  iva:21, cat:"Cajas/ODF"},
+  {cod:"1616",    desc:"CAJA DISTRIBUCION 2X16 CON ADAPTADORES Y SPLITTER 1*16",       precio:18.54,  iva:21, cat:"Cajas/ODF"},
+  {cod:"216V4D",  desc:"CAJA DISTRIBUCION REFORZADA 2X16 VACIA CON 4 DERIVACIONES",   precio:25.91,  iva:21, cat:"Cajas/ODF"},
+  {cod:"168R",    desc:"CAJA DISTRIBUCION REFORZADA 2X16 CON SPLITTER 1*8",           precio:42.94,  iva:21, cat:"Cajas/ODF"},
+  {cod:"CD16",    desc:"CAJA DOMO 2X16 PRECONECTORIZADA CON HERRAJES",                precio:46.36,  iva:21, cat:"Cajas/ODF"},
+  {cod:"HTB8011", desc:"CAJA DISTRIBUCION 2X8 CON SPLITTER 1*8 SC/APC FULL",          precio:14.11,  iva:21, cat:"Cajas/ODF"},
+  {cod:"D24",     desc:"DOMO DE 24 CORES GRANDE",                                     precio:24.19,  iva:21, cat:"Cajas/ODF"},
+  {cod:"D24M",    desc:"DOMO DE 24 CORES MICRO PARA EMPALMES",                        precio:35.97,  iva:21, cat:"Cajas/ODF"},
+  {cod:"D48",     desc:"CAJA DE EMPALME DOMO - 48 FIBRAS",                            precio:29.02,  iva:21, cat:"Cajas/ODF"},
+  {cod:"D96",     desc:"CAJA DE EMPALME DOMO - 96 FIBRAS",                            precio:30.29,  iva:21, cat:"Cajas/ODF"},
+  {cod:"D144",    desc:"CAJA DE EMPALME DOMO - 144 FIBRAS",                           precio:50.39,  iva:21, cat:"Cajas/ODF"},
+  {cod:"ODF12",   desc:"ODF 12 CORES FULL CON ADAPTADORES Y PATCHCORDS",              precio:35.88,  iva:21, cat:"Cajas/ODF"},
+  {cod:"ODF24",   desc:"ODF 24 CORES FULL CON ADAPTADORES Y PATCHCORDS",              precio:43.33,  iva:21, cat:"Cajas/ODF"},
+  {cod:"ODF48",   desc:"ODF 48 CORES FULL CON ADAPTADORES Y PATCHCORDS",              precio:64.50,  iva:21, cat:"Cajas/ODF"},
+  {cod:"ODF96",   desc:"ODF 96 CORES FULL CON ADAPTADORES Y PATCHCORDS",              precio:103.80, iva:21, cat:"Cajas/ODF"},
+  {cod:"RO2",     desc:"ROSETA OPTICA 2 CORES",                                       precio:0.48,   iva:21, cat:"Cajas/ODF"},
+  // Conectores - IVA 21%
+  {cod:"CA",      desc:"CONECTOR DE CAMPO SC/APC",                   precio:0.52,  iva:21, cat:"Conectores"},
+  {cod:"CBA",     desc:"CONECTOR DE CAMPO SC/APC CON CIERRE BISAGRA",precio:1.23,  iva:21, cat:"Conectores"},
+  {cod:"CU",      desc:"CONECTOR DE CAMPO SC/UPC",                   precio:0.52,  iva:21, cat:"Conectores"},
+  {cod:"CBU",     desc:"CONECTOR DE CAMPO SC/UPC CON CIERRE BISAGRA",precio:0.74,  iva:21, cat:"Conectores"},
+  {cod:"LCPC",    desc:"CONECTOR DE CAMPO LC/PC",                    precio:2.70,  iva:21, cat:"Conectores"},
+  {cod:"AAPC",    desc:"ADAPTADOR SC/APC",                           precio:0.12,  iva:21, cat:"Conectores"},
+  {cod:"AUPC",    desc:"ADAPTADOR SC/UPC",                           precio:0.12,  iva:21, cat:"Conectores"},
+  // Herrajes - IVA 21%
+  {cod:"AOS",        desc:"ABRAZADERA OPTICA PARA SUSPENSION",                          precio:1.75,   iva:21, cat:"Herrajes"},
+  {cod:"CP30",       desc:"CRUZ PLASTICA 300X300",                                      precio:4.01,   iva:21, cat:"Herrajes"},
+  {cod:"CP50",       desc:"CRUZ PLASTICA 500X500",                                      precio:6.61,   iva:21, cat:"Herrajes"},
+  {cod:"CG50",       desc:"CRUZ DE RESERVA 50X50 MM GALVANIZADA",                       precio:8.53,   iva:21, cat:"Herrajes"},
+  {cod:"CG100",      desc:"CRUZ DE RESERVA 100X100 MM GALVANIZADA",                     precio:14.21,  iva:21, cat:"Herrajes"},
+  {cod:"CRFO35.35",  desc:"CRUZ DE RESERVA 35X35 MM GALVANIZADA",                       precio:5.50,   iva:21, cat:"Herrajes"},
+  {cod:"AP4",        desc:"AISLADOR PLASTICO SOPORTE OPTICO 4 VIAS",                    precio:0.64,   iva:21, cat:"Herrajes"},
+  {cod:"SIPAC",      desc:"SIPA COMPACTO 80 MTS / 500 KG TRACCION",                     precio:0.81,   iva:21, cat:"Herrajes"},
+  {cod:"SIPAM",      desc:"SIPA MAX 80 MTS / 500 KG TRACCION",                          precio:1.10,   iva:21, cat:"Herrajes"},
+  {cod:"SIPAD",      desc:"SIPA DUPLO (HASTA 1000 KG)",                                 precio:1.42,   iva:21, cat:"Herrajes"},
+  {cod:"MDG",        desc:"MORDAZA PARA DROP CON GANCHO",                               precio:0.18,   iva:21, cat:"Herrajes"},
+  {cod:"A31",        desc:"ANCLAJE 3X1 300 KG TRACCION (VANO 80 MTS)",                  precio:1.14,   iva:21, cat:"Herrajes"},
+  {cod:"KRUM",       desc:"KIT RETENCION URBANO CON MENSULA FTTH",                      precio:4.32,   iva:21, cat:"Herrajes"},
+  {cod:"KRUS",       desc:"KIT RETENCION URBANO CON SIPA",                              precio:3.17,   iva:21, cat:"Herrajes"},
+  {cod:"KSUM",       desc:"KIT SUSPENSION URBANO CON MENSULA FTTH",                     precio:3.57,   iva:21, cat:"Herrajes"},
+  {cod:"MMD",        desc:"MENSULA METALICA PARA DROP",                                 precio:0.42,   iva:21, cat:"Herrajes"},
+  {cod:"MTU",        desc:"MENSULA PARA TENDIDO URBANO (COLITA DE CHANCHO)",             precio:2.13,   iva:21, cat:"Herrajes"},
+  {cod:"MTRI",       desc:"MENSULA PARA TENDIDO RURAL PKS GALVANIZADA IMPORTADA",        precio:2.73,   iva:21, cat:"Herrajes"},
+  {cod:"MCI",        desc:"MENSULA PKS GALVANIZADA CHICA IMPORTADA",                    precio:1.00,   iva:21, cat:"Herrajes"},
+  {cod:"MTR",        desc:"MENSULA PARA TENDIDO RURAL PKS GALVANIZADA",                 precio:3.41,   iva:21, cat:"Herrajes"},
+  {cod:"PR7A",       desc:"PREFORMADO DE RETENCION 7 A 8 MM ACERO 62 CM 4 HILOS",       precio:2.21,   iva:21, cat:"Herrajes"},
+  {cod:"PR9A",       desc:"PREFORMADO DE RETENCION 9 A 10 MM ACERO 62 CM 4 HILOS",      precio:2.30,   iva:21, cat:"Herrajes"},
+  {cod:"PR11A",      desc:"PREFORMADO DE RETENCION 11 A 12 MM ACERO 62 CM 4 HILOS",     precio:2.42,   iva:21, cat:"Herrajes"},
+  {cod:"PS7A",       desc:"PREFORMADO DE SUSPENSION 7 A 8 MM ACERO 92 CM 4 HILOS",      precio:1.50,   iva:21, cat:"Herrajes"},
+  {cod:"PS9A",       desc:"PREFORMADO DE SUSPENSION 9 A 10 MM ACERO 92 CM 4 HILOS",     precio:1.42,   iva:21, cat:"Herrajes"},
+  {cod:"PR13",       desc:"PREFORMADO DE RETENCION 13 A 14 MM",                         precio:2.44,   iva:21, cat:"Herrajes"},
+  {cod:"PS13",       desc:"PREFORMADO DE SUSPENSION 13 A 14 MM",                        precio:2.84,   iva:21, cat:"Herrajes"},
+  {cod:"PCPR",       desc:"PREFORMADO CAMISA PROTECCION PARA FO RURAL",                 precio:2.84,   iva:21, cat:"Herrajes"},
+  {cod:"PROL.350MM", desc:"PROLONGADOR 350 MM",                                         precio:4.41,   iva:21, cat:"Herrajes"},
+  {cod:"CDALC/P",    desc:"GRILLETE DE ALUMINIO CON PERNO",                             precio:2.77,   iva:21, cat:"Herrajes"},
+  {cod:"FLE345",     desc:"FLEJE ACERO INOX 304 3/4 X 0,5MM X 30MTS (rollo)",           precio:16.50,  iva:21, cat:"Herrajes"},
+  {cod:"FLE347",     desc:"FLEJE ACERO INOX 304 3/4 X 0,7MM X 30MTS (rollo)",           precio:17.31,  iva:21, cat:"Herrajes"},
+  {cod:"HEB34",      desc:"HEBILLAS PARA FLEJE ACERO INOX 304 3/4 X 100 unid.",          precio:17.31,  iva:21, cat:"Herrajes"},
+  {cod:"MDP",        desc:"MORSETO PLASTICO PARA DROP",                                 precio:0.46,   iva:21, cat:"Herrajes"},
+  {cod:"MCD",        desc:"MORDAZA CARTUCHERA PARA DROP",                               precio:0.28,   iva:21, cat:"Herrajes"},
+  {cod:"MDM",        desc:"MORSETO PARA CABLE DROP PLANO METALICO",                     precio:0.42,   iva:21, cat:"Herrajes"},
+  {cod:"CRD",        desc:"REPARACION PARA DROP CON ADAPTADOR SC/APC",                  precio:0.52,   iva:21, cat:"Herrajes"},
+  // Electronica - IVA 21%
+  {cod:"OLT8",  desc:"OLT CDATA GPON 8 BOCAS C/8 SFP 1024 MOD",     precio:1484.57, iva:21, cat:"Electronica"},
+  {cod:"OLT16", desc:"OLT CDATA GPON 16 BOCAS C/8 SFP C+ 2048 MOD", precio:2875.18, iva:21, cat:"Electronica"},
+  {cod:"2GE",   desc:"2GE + CATV + 2 WIFI CDATA (FD702GW-DX-R411)",  precio:55.46,   iva:21, cat:"Electronica"},
+  {cod:"4GE",   desc:"4 GE + 2WIFI CDATA (FD514GD-R460)",            precio:38.29,   iva:21, cat:"Electronica"},
+  {cod:"1GE",   desc:"1 GE CDATA (FD511DC-F660)",                    precio:15.76,   iva:21, cat:"Electronica"},
+  {cod:"1GEW",  desc:"1 GE + 1FE + WIFI CDATA (FD512XW-R550)",       precio:26.41,   iva:21, cat:"Electronica"},
+  {cod:"KH",    desc:"KIT HERRAMIENTAS PARA ACOMETIDAS (SIN POWER METER)", precio:35.73, iva:21, cat:"Herramientas"},
+];
+
+// ===================== ESTADO =====================
+let items = [];
+let selectedProduct = null;
+let dropdownIndex = -1;
+
+// ===================== BÚSQUEDA =====================
+function buscarProducto() {
+  const q = document.getElementById('buscar').value.trim().toLowerCase();
+  const dd = document.getElementById('dropdown');
+  dropdownIndex = -1;
+  if (q.length < 1) { dd.classList.remove('open'); return; }
+  const results = productos.filter(p =>
+    p.cod.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q)
+  ).slice(0, 10);
+  if (results.length === 0) { dd.innerHTML = '<div class="dropdown-item"><div class="item-desc">Sin resultados</div></div>'; dd.classList.add('open'); return; }
+  dd.innerHTML = results.map((p, i) => `
+    <div class="dropdown-item" onclick="seleccionarProducto('${p.cod}')" data-idx="${i}">
+      <div class="item-code">${p.cod} · ${p.cat}</div>
+      <div class="item-desc">${p.desc}</div>
+      <div class="item-price">U$S ${p.precio.toFixed(2)} + IVA ${p.iva}%</div>
+    </div>
+  `).join('');
+  dd.classList.add('open');
+}
+
+function navDropdown(e) {
+  const dd = document.getElementById('dropdown');
+  const items = dd.querySelectorAll('.dropdown-item');
+  if (!dd.classList.contains('open') || items.length === 0) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); dropdownIndex = Math.min(dropdownIndex+1, items.length-1); highlightDD(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); dropdownIndex = Math.max(dropdownIndex-1, 0); highlightDD(items); }
+  else if (e.key === 'Enter' && dropdownIndex >= 0) { e.preventDefault(); items[dropdownIndex].click(); }
+  else if (e.key === 'Escape') { dd.classList.remove('open'); }
+}
+function highlightDD(items) {
+  items.forEach((el,i) => el.classList.toggle('active', i === dropdownIndex));
+  if (dropdownIndex >= 0) items[dropdownIndex].scrollIntoView({block:'nearest'});
+}
+
+function seleccionarProducto(cod) {
+  selectedProduct = productos.find(p => p.cod === cod);
+  document.getElementById('dropdown').classList.remove('open');
+  document.getElementById('buscar').value = selectedProduct.cod + ' — ' + selectedProduct.desc;
+  const sp = document.getElementById('selected-product');
+  sp.classList.add('show');
+  document.getElementById('sp-code').textContent = selectedProduct.cod + ' · ' + selectedProduct.cat;
+  document.getElementById('sp-desc').textContent = selectedProduct.desc;
+  document.getElementById('sp-price').textContent = `U$S ${selectedProduct.precio.toFixed(2)} + IVA ${selectedProduct.iva}%`;
+  document.getElementById('custom-price-row').classList.add('show');
+  document.getElementById('custom-price').value = '';
+  document.getElementById('cantidad').focus();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) document.getElementById('dropdown').classList.remove('open');
+});
+
+// ===================== ÍTEM MANUAL =====================
+function agregarItemManual() {
+  const desc   = document.getElementById('manual-desc').value.trim();
+  const precio = parseFloat(document.getElementById('manual-precio').value);
+  const iva    = parseFloat(document.getElementById('manual-iva').value);
+  const cant   = parseFloat(document.getElementById('manual-cant').value);
+
+  if (!desc)            { showToast('Escribí una descripción'); return; }
+  if (!precio || precio <= 0) { showToast('Ingresá un precio válido'); return; }
+  if (!cant || cant <= 0)     { showToast('Ingresá una cantidad válida'); return; }
+
+  items.push({
+    cod: '—',
+    desc,
+    cant,
+    precio,
+    precioLabel: `U$S ${precio.toFixed(2)}`,
+    iva,
+    cat: 'Manual',
+  });
+
+  // Reset
+  document.getElementById('manual-desc').value = '';
+  document.getElementById('manual-precio').value = '';
+  document.getElementById('manual-cant').value = '1';
+  document.getElementById('manual-iva').value = '21';
+
+  renderItems();
+  renderTotales();
+  showToast('Ítem agregado ✓');
+}
+
+// ===================== AGREGAR ITEM =====================
+function agregarItem() {
+  if (!selectedProduct) { showToast('Seleccioná un producto primero'); return; }
+  const cant = parseFloat(document.getElementById('cantidad').value);
+  if (!cant || cant <= 0) { showToast('Ingresá una cantidad válida'); return; }
+  const customP = parseFloat(document.getElementById('custom-price').value);
+  const precio = (!isNaN(customP) && customP > 0) ? customP : selectedProduct.precio;
+  const precioLabel = (!isNaN(customP) && customP > 0) ? `U$S ${customP.toFixed(2)} ★` : `U$S ${selectedProduct.precio.toFixed(2)}`;
+
+  items.push({
+    cod: selectedProduct.cod,
+    desc: selectedProduct.desc,
+    cant,
+    precio,
+    precioLabel,
+    iva: selectedProduct.iva,
+    cat: selectedProduct.cat,
+  });
+
+  // Reset
+  selectedProduct = null;
+  document.getElementById('buscar').value = '';
+  document.getElementById('cantidad').value = '1';
+  document.getElementById('custom-price').value = '';
+  document.getElementById('selected-product').classList.remove('show');
+  document.getElementById('custom-price-row').classList.remove('show');
+
+  renderItems();
+  renderTotales();
+  showToast('Producto agregado ✓');
+}
+
+function eliminarItem(idx) {
+  items.splice(idx, 1);
+  renderItems();
+  renderTotales();
+}
+
+// ===================== RENDER =====================
+function renderItems() {
+  const el = document.getElementById('items-list');
+  if (items.length === 0) {
+    el.innerHTML = '<div class="empty-items"><span class="emoji">📦</span>Todavía no agregaste productos</div>';
+    return;
+  }
+  const tc = parseFloat(document.getElementById('tc').value) || 1490;
+  const echeq = document.getElementById('cond-pago').value === 'echeq';
+  el.innerHTML = items.map((it, i) => {
+    const mult = echeq ? 1.05 : 1;
+    const totalUSD = it.cant * it.precio * (1 + it.iva/100) * mult;
+    return `
+    <div class="item-card">
+      <div class="item-header">
+        <div>
+          <div class="item-code">${it.cod} · ${it.cat}</div>
+          <div class="item-desc">${it.desc}</div>
+        </div>
+        <button class="btn btn-danger" onclick="eliminarItem(${i})">✕</button>
+      </div>
+      <div class="item-footer">
+        <div class="item-detail">${it.cant} × ${it.precioLabel} + IVA ${it.iva}%</div>
+        <div class="item-total">U$S ${totalUSD.toFixed(2)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTotales() {
+  const el = document.getElementById('totals-box');
+  if (items.length === 0) { el.innerHTML = '<div class="no-items-msg">Agregá productos para ver los totales</div>'; return; }
+  const tc = parseFloat(document.getElementById('tc').value) || 1490;
+  const echeq = document.getElementById('cond-pago').value === 'echeq';
+  const mult = echeq ? 1.05 : 1;
+
+  let neto = 0, iva21 = 0, iva105 = 0;
+  items.forEach(it => {
+    const sub = it.cant * it.precio * mult;
+    neto += sub;
+    if (it.iva === 21)   iva21  += sub * 0.21;
+    else                 iva105 += sub * 0.105;
+  });
+  const total = neto + iva21 + iva105;
+
+  el.innerHTML = `
+    <div class="total-row"><span class="total-label">Importe neto</span><span class="total-value">U$S ${neto.toFixed(2)}</span></div>
+    ${iva21 > 0 ? `<div class="total-row"><span class="total-label">IVA 21%</span><span class="total-value">U$S ${iva21.toFixed(2)}</span></div>` : ''}
+    ${iva105 > 0 ? `<div class="total-row"><span class="total-label">IVA 10,5%</span><span class="total-value">U$S ${iva105.toFixed(2)}</span></div>` : ''}
+    <div class="total-row highlight"><span class="total-label">TOTAL U$S</span><span class="total-value">U$S ${total.toFixed(2)}</span></div>
+    <div class="total-row highlight"><span class="total-label">TOTAL $</span><span class="total-value">$ ${(total*tc).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span></div>
+  `;
+}
+
+function toggleRecargo() {
+  const echeq = document.getElementById('cond-pago').value === 'echeq';
+  document.getElementById('recargo-badge').classList.toggle('show', echeq);
+  renderItems();
+  renderTotales();
+}
+
+// Actualizar al cambiar TC
+document.getElementById('tc').addEventListener('input', () => { renderItems(); renderTotales(); });
+
+// ===================== PDF =====================
+function generarPDF() {
+  if (items.length === 0) { showToast('Agregá al menos un producto'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const tc   = parseFloat(document.getElementById('tc').value) || 1490;
+  const echeq = document.getElementById('cond-pago').value === 'echeq';
+  const mult  = echeq ? 1.05 : 1;
+  const nroCot = document.getElementById('nro-cot').value || '0001-________';
+  const fecha = new Date().toLocaleDateString('es-AR');
+  const cliente = document.getElementById('cli-nombre').value || '—';
+  const cuit    = document.getElementById('cli-cuit').value || '';
+  const sitIva  = document.getElementById('cli-iva').value;
+  const dir     = document.getElementById('cli-dir').value || '';
+  const loc     = document.getElementById('cli-loc').value || '';
+  const BLUE = [26, 109, 173];
+  const W = 210; const M = 15;
+
+  // Header box
+  const logoB64 = 'data:image/jpeg;base64,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';
+  doc.setFillColor(...BLUE);
+  doc.rect(M, 10, W-M*2, 22, 'F');
+  try { doc.addImage(logoB64, 'JPEG', M+2, 11, 40, 18); } catch(e) {}
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  doc.text(`Cotizacion ${nroCot}`, W-M, 18, {align:'right'});
+  doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(`Fecha: ${fecha}`, W-M, 24, {align:'right'});
+
+  // Empresa info
+  doc.setTextColor(100,100,100); doc.setFontSize(7);
+  doc.text('CONECTORIZAR SRL  |  GUEMES 1923 Piso:5 Dpto:B  |  (2000) Rosario, Santa Fe  |  conectorizar@conectorizar.com  |  CUIT: 30-71567467-6', M, 36);
+  doc.setDrawColor(...BLUE); doc.setLineWidth(0.5);
+  doc.line(M, 38, W-M, 38);
+
+  // Cliente
+  doc.setTextColor(0,0,0); doc.setFontSize(8);
+  doc.setFont('helvetica','bold'); doc.text('Cliente:', M, 45);
+  doc.setFont('helvetica','normal'); doc.text(cliente, M+18, 45);
+  if (cuit) { doc.setFont('helvetica','bold'); doc.text('C.U.I.T.:', 130, 45); doc.setFont('helvetica','normal'); doc.text(cuit, 148, 45); }
+  doc.setFont('helvetica','bold'); doc.text('Direccion:', M, 51);
+  doc.setFont('helvetica','normal'); doc.text(dir, M+22, 51);
+  doc.setFont('helvetica','bold'); doc.text('Localidad:', M, 57);
+  doc.setFont('helvetica','normal'); doc.text(loc, M+22, 57);
+  doc.setFont('helvetica','bold'); doc.text('Sit. IVA:', M, 63);
+  doc.setFont('helvetica','normal'); doc.text(sitIva, M+20, 63);
+
+  // Tabla
+  let y = 70;
+  const cols = [18, 72, 12, 18, 12, 20, 23];
+  const heads = ['Codigo','Descripcion','Cant.','P.Unit\nU$S','IVA%','P.Final\nU$S','Total $'];
+  doc.setFillColor(...BLUE); doc.rect(M, y, cols.reduce((a,b)=>a+b,0), 10, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(7);
+  let x = M;
+  heads.forEach((h,i) => {
+    const lines = h.split('\n');
+    lines.forEach((l,li) => doc.text(l, x + cols[i]/2, y + 4 + li*3.5, {align:'center'}));
+    x += cols[i];
+  });
+
+  y += 10;
+  let neto=0, iva21=0, iva105=0;
+  items.forEach((it, idx) => {
+    const sub   = it.cant * it.precio * mult;
+    const ivaMonto = sub * (it.iva/100);
+    const total = sub + ivaMonto;
+    neto += sub; if (it.iva===21) iva21+=ivaMonto; else iva105+=ivaMonto;
+
+    doc.setFillColor(idx%2===0 ? 255 : 245, idx%2===0 ? 255 : 245, idx%2===0 ? 255 : 245);
+    doc.rect(M, y, cols.reduce((a,b)=>a+b,0), 8, 'F');
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+    doc.rect(M, y, cols.reduce((a,b)=>a+b,0), 8);
+    doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    const vals = [it.cod, it.desc.substring(0,45), String(it.cant), it.precio.toFixed(2), it.iva+'%', total.toFixed(2), '$ '+(total*tc).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})];
+    x = M;
+    vals.forEach((v,i) => {
+      if (i===1) doc.text(v, x+1.5, y+5);
+      else doc.text(v, x+cols[i]/2, y+5, {align:'center'});
+      x += cols[i];
+    });
+    y += 8;
+  });
+
+  // Totales
+  const totalUSD = neto + iva21 + iva105;
+  y += 5;
+  doc.setFontSize(8); doc.setTextColor(80,80,80);
+  const cond = echeq ? '0-30-60 dias con echeq (precio incluye recargo 5%)' : 'CONTADO';
+  doc.text(`Items: ${items.length}   |   TC: ${tc} DOLAR OFICIAL BNA   |   Condicion: ${cond}`, M, y);
+
+  y += 6;
+  const totRows = [
+    ['IMPORTE NETO:', `U$S ${neto.toFixed(2)}`],
+    ...(iva21>0  ? [['IVA 21%:',   `U$S ${iva21.toFixed(2)}`]]  : []),
+    ...(iva105>0 ? [['IVA 10,5%:', `U$S ${iva105.toFixed(2)}`]] : []),
+    ['TOTAL U$S:', `U$S ${totalUSD.toFixed(2)}`],
+    ['TOTAL $:', `$ ${(totalUSD*tc).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}`],
+  ];
+  const bx = 127; const bw = 68;
+  totRows.forEach((row, i) => {
+    const isTotal = row[0].startsWith('TOTAL');
+    if (isTotal) { doc.setFillColor(255,248,225); doc.rect(bx, y-4, bw, 7, 'F'); }
+    doc.setDrawColor(200,200,200); doc.rect(bx, y-4, bw, 7);
+    doc.setTextColor(isTotal ? 0 : 80, isTotal ? 0 : 80, isTotal ? 0 : 80);
+    doc.setFont('helvetica', isTotal ? 'bold' : 'normal'); doc.setFontSize(isTotal ? 9 : 8);
+    doc.text(row[0], bx+2, y);
+    doc.text(row[1], bx+bw-2, y, {align:'right'});
+    y += 7;
+  });
+
+  const nombre = cliente.replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
+  doc.save(`Cotizacion_${nroCot.replace(/[^0-9]/g,'')}_${nombre}.pdf`);
+  showToast('PDF descargado ✓');
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===================== CLIENTES GUARDADOS =====================
+const CLIENTES_PRELOADED = [{"nombre": "ADVANTUN SRL", "cuit": "30-71232130-6", "iva": "Responsable Inscripto", "dir": "ITUZAIGÓ 3367", "loc": "BENAVIDEZ - Buenos Aires"}, {"nombre": "AGUAS DEL COLORADO S.A", "cuit": "30-70979601-8", "iva": "Responsable Inscripto", "dir": "ALFREDO PALACIOS 890", "loc": "SANTA ROSA - La Pampa"}, {"nombre": "AIREDATA S.R.L.", "cuit": "30-71528085-6", "iva": "Responsable Inscripto", "dir": "JUJUY 609", "loc": "MACIEL - Santa Fe"}, {"nombre": "ALARCON JUAN CARLOS ENRIQUE", "cuit": "20-40770259-0", "iva": "Monotributista", "dir": "Libertad 357", "loc": "ALEJANDRO KORN - Buenos Aires"}, {"nombre": "ALCALDE, MIRIAM GABRIELA", "cuit": "27-27609785-2", "iva": "Monotributista", "dir": "B° BANFIELD 27 DE ABRIL 394", "loc": "LA BANDA - Santiago Del Estero"}, {"nombre": "ALEJANDRO SABRINA MANUELA", "cuit": "27-36364306-5", "iva": "Responsable Inscripto", "dir": "SUIPACHA 799", "loc": "JUNIN - Buenos Aires"}, {"nombre": "ALOA PUBLISUR SRL", "cuit": "30-71424888-6", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 2247", "loc": "VENADO TUERTO - Santa Fe"}, {"nombre": "ALVARO LUKA MIGUEZ VILL", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "ANFA ELECTRICIDAD S.R.L", "cuit": "30-71044192-4", "iva": "Responsable Inscripto", "dir": "ESTANISLAO LOPEZ 188", "loc": "SOLDINI - Santa Fe"}, {"nombre": "ANNA ANTONIO RICARDO", "cuit": "20-33428510-4", "iva": "Responsable Inscripto", "dir": "GRAL PAZ 380", "loc": "SALTA - Salta"}, {"nombre": "APA AMARRES PREFORMADOS AEREOS S.R.L.", "cuit": "30-71912696-7", "iva": "Responsable Inscripto", "dir": "MENDOZA 1078", "loc": "ROSARIO - Santa Fe"}, {"nombre": "ARAYA MIGUEL", "cuit": "20-25505268-4", "iva": "Responsable Inscripto", "dir": "CARRIEGO 1290", "loc": "ROSARIO - Santa Fe"}, {"nombre": "ARELAUQUEN GOLF & COUNTRY CLUB S.A", "cuit": "30-70758362-9", "iva": "Responsable Inscripto", "dir": "Ruta 82 S/N", "loc": "BARILOCHE - Rio Negro"}, {"nombre": "ARGAÑARAZ ANGEL GABRIEL", "cuit": "20-34402424-4", "iva": "Responsable Inscripto", "dir": "1337 70 BARRIO SARMIENTO", "loc": "FLORENCIO VARELA - Buenos Aires"}, {"nombre": "ARGAÑARAZ JORGE ALFREDO", "cuit": "20-28476700-5", "iva": "Responsable Inscripto", "dir": "PASAJE ALBERT EINSTEIN 519", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "ASEGUINOLAZA, FERMIN", "cuit": "20-26858253-4", "iva": "Responsable Inscripto", "dir": "SARMIENTO", "loc": "ROSARIO - Santa Fe"}, {"nombre": "AZAREVICH WALTER OMAR", "cuit": "20-16115900-0", "iva": "Responsable Inscripto", "dir": "MANZANA 3 SECC A CIRC I PARC 3", "loc": "MISION NUEVA POMPEYA - Chaco"}, {"nombre": "B M & ASOCIADOS SRL", "cuit": "33-70858100-9", "iva": "Responsable Inscripto", "dir": "ITALIA 847 Piso:01 Dpto:01", "loc": "ROSARIO - Santa Fe"}, {"nombre": "BAIGORRIA ALBERTO DANIEL", "cuit": "20-28275533-6", "iva": "Responsable Inscripto", "dir": "O.FERROVIARIOS 1055", "loc": "PALMIRA - Mendoza"}, {"nombre": "BARRIOS PABLO ENRIQUE", "cuit": "20-18291041-5", "iva": "Monotributista", "dir": "LOS TULIPANES 1878", "loc": "TANDIL - Buenos Aires"}, {"nombre": "BAYRON S.R.L", "cuit": "30-71419194-9", "iva": "Responsable Inscripto", "dir": "ALSINA 563", "loc": "CALETA OLIVIA - Santa Cruz"}, {"nombre": "BDI ARGENTINA S.A.S.", "cuit": "30-71577144-2", "iva": "Responsable Inscripto", "dir": "FLORIDA 253 Piso:11 B", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "BEISAGA OMAR TITO", "cuit": "20-22253812-3", "iva": "Responsable Inscripto", "dir": "Calle Olavarria 705 local 03", "loc": "SALTA - Salta"}, {"nombre": "BENAPRES RODRIGUEZ, JOSE CIRILO", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "BERENGUE JAVIER EDUARDO", "cuit": "20-24660963-3", "iva": "Responsable Inscripto", "dir": "JUAN PUJOL 2046", "loc": "MONTE CASEROS - Corrientes"}, {"nombre": "BERTONE ADRIAN RUBEN", "cuit": "20-22281913-0", "iva": "Responsable Inscripto", "dir": "8 544", "loc": "GENERAL PICO - La Pampa"}, {"nombre": "BIGNET SOLUCIONES S.R.L.", "cuit": "30-71711571-2", "iva": "Responsable Inscripto", "dir": "BELGRANO AV. 3231 Piso:14 Dpto:C", "loc": "ROSARIO - Santa Fe"}, {"nombre": "BO PLAY FIBRA OPTICA S. R. L", "cuit": "30-71748681-8", "iva": "Responsable Inscripto", "dir": "ISLA DEL CERRITO 1488", "loc": "RESISTENCIA - Chaco"}, {"nombre": "BOXLER, MARIO JAVIER", "cuit": "20-23009335-1", "iva": "Responsable Inscripto", "dir": "COLECTORA RUTA NACIONAL 127 198", "loc": "LOS CONQUISTADORES - Entre Rios"}, {"nombre": "BREMOCOR ELECTROINDUSTRIAL S.A", "cuit": "30-71571232-2", "iva": "Responsable Inscripto", "dir": "ROSARIO DE SANTA FE 1195", "loc": "SAN FRANCISCO - Cordoba"}, {"nombre": "BRESCA DIAZ RAMIRO DANIEL", "cuit": "20-35553681-6", "iva": "Responsable Inscripto", "dir": "", "loc": "EL RESGUARDO - Mendoza"}, {"nombre": "BREST, WILSON ALFREDO", "cuit": "23-33214158-9", "iva": "Responsable Inscripto", "dir": "JULIO TORT 2900", "loc": "RESISTENCIA - Chaco"}, {"nombre": "BROADBAND COMUNICACIONES SAS", "cuit": "33-71691073-9", "iva": "Responsable Inscripto", "dir": "MITRE OESTE 2046", "loc": "ALBARDON - San Juan"}, {"nombre": "BROADBANDTECH S.A", "cuit": "30-70729176-8", "iva": "Responsable Inscripto", "dir": "JUNIN 1596 Piso:6", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "BRUNELLO DIEGO GUILLERMO", "cuit": "20-30768647-4", "iva": "Responsable Inscripto", "dir": "PJE ANTONIO RIVERA", "loc": "VALLE VIEJO - Catamarca"}, {"nombre": "BVNET S.A", "cuit": "30-70099991-9", "iva": "Responsable Inscripto", "dir": "PARANÁ 326 PISO 2", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "C & C COMUNICACIONES DIGITALES S.R.L.", "cuit": "30-71175038-6", "iva": "Responsable Inscripto", "dir": "BELGRANO 663 Piso:1 Dpto:A", "loc": "TRELEW - Chubut"}, {"nombre": "CABANILLAS, ROLANDO GABRIEL", "cuit": "20-16997860-4", "iva": "Responsable Inscripto", "dir": "DIAGONAL SARMIENTO 365", "loc": "CAUCETE - San Juan"}, {"nombre": "CABLE IMAGEN ARMSTRONG SRL", "cuit": "30-63106079-6", "iva": "Responsable Inscripto", "dir": "PERU 1448", "loc": "ARMSTRONG - Santa Fe"}, {"nombre": "CABLE VIDEO URDINARRAIN SRL", "cuit": "30-64582614-7", "iva": "Responsable Inscripto", "dir": "AV LIBERTAD 354", "loc": "URDINARRAIN - Entre Rios"}, {"nombre": "CABLEFUSION SA", "cuit": "33-71625574-9", "iva": "Responsable Inscripto", "dir": "AUT RICARDO BALBIN 9 Dpto:E7", "loc": "BARRIO SANTO DOMINGO - Buenos Aires"}, {"nombre": "CALF COOP. SERVICIOS DE NEUQUEN LTDA", "cuit": "30-54572139-9", "iva": "Responsable Inscripto", "dir": "MITRE 609", "loc": "NEUQUEN - Neuquen"}, {"nombre": "CAMPANA DE PASCUA LTDA", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "CAPO, NESTOR JULIO", "cuit": "20-23437984-5", "iva": "Monotributista", "dir": "", "loc": "SAN GREGORIO - Santa Fe"}, {"nombre": "CASELLES COSTA, FACUNDO JAVIER", "cuit": "20-35508828-7", "iva": "Responsable Inscripto", "dir": "MENDOZA NORTE 678", "loc": "SAN JUAN - San Juan"}, {"nombre": "CATALA SERGIO", "cuit": "20-24836782-3", "iva": "Consumidor Final", "dir": "VIRGEN DE LOURDES 2768", "loc": "RIVADAVIA - San Juan"}, {"nombre": "CAVITER SRL", "cuit": "30-64279514-3", "iva": "Responsable Inscripto", "dir": "GUTEMBERG ESQ ABS ROJAS", "loc": "TERMAS DE RIO HONDO - Santiago Del Estero"}, {"nombre": "CAÑETE GLADIS ROXANA", "cuit": "27-24115600-7", "iva": "Responsable Inscripto", "dir": "BOLIVAR 166", "loc": "PASO DE LA PATRIA - Corrientes"}, {"nombre": "CELDA COOP. DE DARREGUEIRA", "cuit": "33-54571709-9", "iva": "Responsable Inscripto", "dir": "PUEYRREDON 189", "loc": "Darregueira - Buenos Aires"}, {"nombre": "CELTA COOP. DE TRES ARROYOS", "cuit": "30-54569092-2", "iva": "Responsable Inscripto", "dir": "SARMIENTO 411", "loc": "TRES ARROYOS - Buenos Aires"}, {"nombre": "CEMDO LTDA", "cuit": "30-54572290-5", "iva": "Responsable Inscripto", "dir": "EDISON 99", "loc": "VILLA DOLORES - Cordoba"}, {"nombre": "CERRONET S.R.L", "cuit": "30-71668776-3", "iva": "Responsable Inscripto", "dir": "JUNÍN 785 Piso:6 Dpto:A", "loc": "ROSARIO - Santa Fe"}, {"nombre": "CERVANTES RAMIRO NICOLAS", "cuit": "20-32351742-9", "iva": "Responsable Inscripto", "dir": "Ejército del norte s/n", "loc": "DELFIN GALLO - Tucuman"}, {"nombre": "CHAMORRO, SABINO", "cuit": "20-13412102-6", "iva": "Responsable Inscripto", "dir": "AVDA.JUAN MANUEL DE ROSAS", "loc": "VILLA BERTHET - Chaco"}, {"nombre": "CICCHETTI JOEL ALEJANDRO", "cuit": "27-34205069-2", "iva": "Responsable Inscripto", "dir": "PROVINCIA DE BUENOS AIRES 3922", "loc": "GLEW - Buenos Aires"}, {"nombre": "CISTERNA EDUARDO ANDRES", "cuit": "20-29983036-6", "iva": "Responsable Inscripto", "dir": "LOS AROMOS 368", "loc": "PEREZ - Santa Fe"}, {"nombre": "CISTERNA MARIO OSCAR", "cuit": "20-14440734-3", "iva": "Monotributista", "dir": "LOS ARROYOS 368", "loc": "PEREZ - Santa Fe"}, {"nombre": "CLEARNET S.A.", "cuit": "30-71681260-6", "iva": "Responsable Inscripto", "dir": "RAMON RAIMUNDO 532", "loc": "PERGAMINO - Buenos Aires"}, {"nombre": "CO.SE.FA. LTDA.", "cuit": "30-62175418-8", "iva": "Responsable Inscripto", "dir": "Isla Belgrano Nº 596", "loc": "FATIMA - Buenos Aires"}, {"nombre": "CODERMATZ, JORGE HUMBERTO", "cuit": "20-11465972-0", "iva": "Responsable Inscripto", "dir": "ARTURO NAVAJAS 266", "loc": "Gobernador Virasoro - Corrientes"}, {"nombre": "COLLANTES, HUGO", "cuit": "20-13113389-9", "iva": "Monotributista", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "COMSA S.A.", "cuit": "30-63925463-8", "iva": "Responsable Inscripto", "dir": "AYACUCHO 1181", "loc": "SAN FERNANDO DEL VALLE DE CATAMARCA - Catamarca"}, {"nombre": "COMUNA DE J B MOLINA", "cuit": "30-99912985-0", "iva": "Exento", "dir": "AMEGHINO SN", "loc": "JUAN B. MOLINA - Santa Fe"}, {"nombre": "COMUNICACIONES A CIA SRL", "cuit": "30-71402198-9", "iva": "Responsable Inscripto", "dir": "IBERA", "loc": "SANTA ANA - Corrientes"}, {"nombre": "COMUNICACIONES VALLES CALCHAQUIES", "cuit": "30-70846752-5", "iva": "Responsable Inscripto", "dir": "GAUFIN DECABADA s/n", "loc": "VAQUEROS - Salta"}, {"nombre": "COMYTEL S.A.", "cuit": "30-70947383-9", "iva": "Responsable Inscripto", "dir": "Rivadavia 771", "loc": "CORRIENTES - Corrientes"}, {"nombre": "CONECTADOS WIPS", "cuit": "30-71565027-0", "iva": "Responsable Inscripto", "dir": "9 de julio 556", "loc": "San Bernardo - Chaco"}, {"nombre": "CONNECTIA S.A.S", "cuit": "30-71796801-4", "iva": "Responsable Inscripto", "dir": "TISSERA 702", "loc": "MENDIOLAZA - Cordoba"}, {"nombre": "CONSULTORA CTM SRL", "cuit": "30-71186250-8", "iva": "Responsable Inscripto", "dir": "Mendoza 654 Piso 5 Dpto 509", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "CONTRERA OMAR", "cuit": "20-14644532-3", "iva": "Responsable Inscripto", "dir": "AVENIDA SOLANO VERA 1300", "loc": "MANANTIAL DE OVANTA - Tucuman"}, {"nombre": "CONTRO GERMAN JOSE", "cuit": "20-20624902-2", "iva": "Responsable Inscripto", "dir": "URQUIZA 830", "loc": "LABORDE - Cordoba"}, {"nombre": "COOP DE CORONEL DU GRATY", "cuit": "30-61292518-2", "iva": "Responsable Inscripto", "dir": "LAVALLE 134", "loc": "CORONEL DU GRATY - Chaco"}, {"nombre": "COOP DE ELECTRICIDAD DE RIO PRIMERO LTDA", "cuit": "30-54574098-9", "iva": "Responsable Inscripto", "dir": "CORRIENTES 199", "loc": "RIO PRIMERO - Cordoba"}, {"nombre": "COOP DE IRIARTE DE PROVISION DE SERVICIOS ELECTRICOS Y OTROS", "cuit": "33-58057515-9", "iva": "Responsable Inscripto", "dir": "EL LAUREL S/N", "loc": "IRIARTE - Buenos Aires"}, {"nombre": "COOP DE J. B. MOLINA", "cuit": "30-54573927-1", "iva": "Responsable Inscripto", "dir": "SARMIENTO 285", "loc": "JUAN B. MOLINA - Santa Fe"}, {"nombre": "COOP DE MONTE CASEROS", "cuit": "30-58831764-8", "iva": "Responsable Inscripto", "dir": "JUAN PUJOL 2310", "loc": "MONTE CASEROS - Corrientes"}, {"nombre": "COOP DE PROV DE SERV TELEF. DE LABORDEBOY LTDA", "cuit": "30-57068510-0", "iva": "Responsable Inscripto", "dir": "INDEPENDENCIA 426", "loc": "LABORDEBOY - Santa Fe"}, {"nombre": "COOP DE SALTO GRANDE LTDA", "cuit": "30-52166189-1", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 852", "loc": "SALTO GRANDE - Santa Fe"}, {"nombre": "COOP DE SERVICIOS PUBLICOS EL TALA LIMITADA", "cuit": "33-54574920-9", "iva": "Responsable Inscripto", "dir": "Racedo 198", "loc": "CERRITO - Entre Rios"}, {"nombre": "COOP DE SERVICIOS SIERRA DE LOS PADRES LTDA", "cuit": "30-57195207-2", "iva": "Responsable Inscripto", "dir": "FABIAN Y ELINA", "loc": "SIERRA DE LOS PADRES - Buenos Aires"}, {"nombre": "COOP ELECT VILLA CAÑAS", "cuit": "30-60528320-5", "iva": "Responsable Inscripto", "dir": "55 565", "loc": "VILLA CAÑAS - Santa Fe"}, {"nombre": "COOP ELECTRICA DE HUGHES", "cuit": "30-54570034-0", "iva": "Responsable Inscripto", "dir": "", "loc": "HUGUES - Santa Fe"}, {"nombre": "COOP ELECTRICA DE RIVADAVIA LTDA", "cuit": "30-54563964-1", "iva": "Responsable Inscripto", "dir": "COLON 310", "loc": "AMERICA - Buenos Aires"}, {"nombre": "COOP LTDA CONSUMO ELECT. DEL SALTO", "cuit": "30-54574777-0", "iva": "Responsable Inscripto", "dir": "AVDA DARDO LAFARCE 296", "loc": "SALTO - Buenos Aires"}, {"nombre": "COOP LTDA DE ELECT Y SS ANEXOS DE ESCOBAR NORT", "cuit": "30-54986086-5", "iva": "Responsable Inscripto", "dir": "PEDRO LAGRAVE N° 285 ESQ. CHACABUCO", "loc": "PILAR - Buenos Aires"}, {"nombre": "COOP SANTA LUCIA LTDA", "cuit": "30-58916696-1", "iva": "Responsable Inscripto", "dir": "", "loc": "DOYLE - Buenos Aires"}, {"nombre": "COOP SSPUB DE FACUNDO QUIROGA", "cuit": "30-57195290-0", "iva": "Responsable Inscripto", "dir": "AVDA GRAL QUIROGA 493", "loc": "QUIROGA - Buenos Aires"}, {"nombre": "COOP TELEF. BELEN", "cuit": "30-56571363-5", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 375", "loc": "BELEN - Catamarca"}, {"nombre": "COOP TELEF. CALAFATE LTDA", "cuit": "30-57143756-9", "iva": "Responsable Inscripto", "dir": "CMTE ESPORA 194", "loc": "CALAFATE - Santa Cruz"}, {"nombre": "COOP. ALPACORRALENSE DE ELECTRICIDAD LTDA", "cuit": "30-54579284-9", "iva": "Responsable Inscripto", "dir": "Calle PUBLICA", "loc": "ALPA CORRAL - Cordoba"}, {"nombre": "COOP. DE ASCENSION", "cuit": "30-58914287-6", "iva": "Responsable Inscripto", "dir": "AV 25 DE MAYO SN", "loc": "ASCENSION - Buenos Aires"}, {"nombre": "COOP. DE ELECT. DE DALMACIO VELEZ LTDA.", "cuit": "30-54579178-8", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 270", "loc": "DALMACIO VELEZ - Cordoba"}, {"nombre": "COOP. DE OBISPO TREJO LTDA.", "cuit": "30-54581649-7", "iva": "Responsable Inscripto", "dir": "CORDOBA 181", "loc": "OBISPO TREJO - Cordoba"}, {"nombre": "COOP. DE PEREZ MILLAN LTDA", "cuit": "33-54575503-9", "iva": "Responsable Inscripto", "dir": "ITALIA 649", "loc": "PEREZ MILLAN - Buenos Aires"}, {"nombre": "COOP. DE SERVICIOS DE LA VIOLETA LTDA.", "cuit": "30-54571372-8", "iva": "Responsable Inscripto", "dir": "SAN MARTIN", "loc": "LA VIOLETA - Buenos Aires"}, {"nombre": "COOP. DE SERVICIOS PUBLICOS DE GERMANIA", "cuit": "30-54569429-4", "iva": "Responsable Inscripto", "dir": "BUENOS AIRES 627", "loc": "GERMANIA - Buenos Aires"}, {"nombre": "COOP. DE SERVICIOS PUBLICOS DE SARMIENTO LTDA", "cuit": "30-54571921-1", "iva": "Responsable Inscripto", "dir": "ROCA 663", "loc": "ROSARIO - Santa Fe"}, {"nombre": "COOP. DE SS PUBLICOS DE COLONIA CAROYA Y JESUS MAR", "cuit": "33-54570706-9", "iva": "Responsable Inscripto", "dir": "J ALICE Y DON BOSCO", "loc": "COLONIA CAROYA - Cordoba"}, {"nombre": "COOP. DE SS PUBLICOS DE COLONIA CAROYA Y JESUS MARIA", "cuit": "33-54570706-9", "iva": "Responsable Inscripto", "dir": "J ALICE Y DON BOSCO", "loc": "COLONIA CAROYA - Cordoba"}, {"nombre": "COOP. DE TELECOM. DE SS DE FUNES LIMITADA", "cuit": "30-61101700-2", "iva": "Responsable Inscripto", "dir": "JUAN ELORZA 1776", "loc": "FUNES - Santa Fe"}, {"nombre": "COOP. ELEC. LTDA DE NORBERTO DE LA RIESTRA", "cuit": "33-54575534-9", "iva": "Responsable Inscripto", "dir": "JOSE P CAMARANO 526 PB", "loc": "NORBERTO DE LA RIESTRA - Buenos Aires"}, {"nombre": "COOP. ELECT. Y DE SERVICIOS MARIANO MORENO LTDA.", "cuit": "30-54572481-9", "iva": "Responsable Inscripto", "dir": "MENDOZA 390", "loc": "9 DE JULIO - Buenos Aires"}, {"nombre": "COOP. ELECTRICA DE DIEGO DE ALVEAR", "cuit": "30-63076574-5", "iva": "Responsable Inscripto", "dir": "NICOLAS MENDILUCE Y BELGRANO", "loc": "DIEGO DE ALVEAR - Santa Fe"}, {"nombre": "COOP. ELECTRICA DE PEDERNALES LTDA", "cuit": "30-61240883-8", "iva": "Responsable Inscripto", "dir": "ISLAS MALVINAS", "loc": "ROSARIO - Santa Fe"}, {"nombre": "COOP. ELECTRICA DE SAN MARCOS SIERRAS", "cuit": "30-54581090-1", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 504", "loc": "SAN MARCOS SIERRAS - Cordoba"}, {"nombre": "COOP. LTDA DE ELECT DE BORDENAVE", "cuit": "30-54574029-6", "iva": "Responsable Inscripto", "dir": "9 DE JULIO Y CACIQUE PINCEN S/N", "loc": "Bordenave - Buenos Aires"}, {"nombre": "COOP. TELEF DE LA QUIACA", "cuit": "30-56535910-6", "iva": "Responsable Inscripto", "dir": "A ESPAÑA 25 DE MAYO", "loc": "LA QUIACA - Jujuy"}, {"nombre": "COOPAR LTDA", "cuit": "30-60001087-1", "iva": "Responsable Inscripto", "dir": "SARMIENTO 40", "loc": "ARRIBEÑOS - Buenos Aires"}, {"nombre": "COOPERATIVA AGUAS CTES DE VILLA GRAL BELGRANO", "cuit": "33-54577493-9", "iva": "Responsable Inscripto", "dir": "URUGUAY 23", "loc": "VILLA GRAL BELGRANO - Cordoba"}, {"nombre": "COOPERATIVA APICOLA AMUYEN LIMITADA", "cuit": "33-71078645-9", "iva": "Responsable Inscripto", "dir": "EL COLIBRI 1644", "loc": "ESCOBAR - Buenos Aires"}, {"nombre": "COOPERATIVA DE 9 DE JULIO Ltda", "cuit": "30-70765048-2", "iva": "Responsable Inscripto", "dir": "AV CIRCUNV Y AGUSTIN GARZON", "loc": "ROSARIO - Santa Fe"}, {"nombre": "COOPERATIVA DE ARROYO CABRAL LIMITADA", "cuit": "30-54573729-5", "iva": "Responsable Inscripto", "dir": "CORDOBA 373", "loc": "ARROYO CABRAL - Cordoba"}, {"nombre": "COOPERATIVA DE BRINKMANN LTDA", "cuit": "30-54572450-9", "iva": "Responsable Inscripto", "dir": "BV. H. YRIGOYEN 1275", "loc": "BRINKMANN - Cordoba"}, {"nombre": "COOPERATIVA DE CORONEL DU GRATY", "cuit": "30-61292518-2", "iva": "Responsable Inscripto", "dir": "LAVALLE 134", "loc": "CORONEL DU GRATY - Chaco"}, {"nombre": "COOPERATIVA DE ELECTRICIDAD Y ANEXOS LTDA.", "cuit": "30-54575268-5", "iva": "Responsable Inscripto", "dir": "25 DE MAYO 186", "loc": "VICUÑA MACKENNA - Cordoba"}, {"nombre": "COOPERATIVA DE ELORTONDO", "cuit": "30-54570157-6", "iva": "Responsable Inscripto", "dir": "MAIPU 547", "loc": "ELORTONDO - Santa Fe"}, {"nombre": "COOPERATIVA DE GENERAL ROCA LTDA.", "cuit": "30-54575183-2", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 401", "loc": "SAIRA - Cordoba"}, {"nombre": "COOPERATIVA DE MARIA TERESA", "cuit": "30-54574913-7", "iva": "Responsable Inscripto", "dir": "", "loc": "MARIA TERESA - Santa Fe"}, {"nombre": "COOPERATIVA DE OBRAS Y SERVICIOS OLIVEROS LIMITADA", "cuit": "30-57186650-8", "iva": "Responsable Inscripto", "dir": "SARMIENTO 388", "loc": "OLIVEROS - Santa Fe"}, {"nombre": "COOPERATIVA DE PALPALA LTDA", "cuit": "33-55883768-9", "iva": "Responsable Inscripto", "dir": "", "loc": "PALPALA - Jujuy"}, {"nombre": "COOPERATIVA DE PASTEUR", "cuit": "30-55483579-8", "iva": "Responsable Inscripto", "dir": "AVDA BARTOLOME M SN", "loc": "PASTEUR - Buenos Aires"}, {"nombre": "COOPERATIVA DE QUEMU QUEMU LTDA", "cuit": "30-54574548-4", "iva": "Responsable Inscripto", "dir": "25 DE MAYO Y ALVEAR 138", "loc": "QUEMU QUEMU - La Pampa"}, {"nombre": "COOPERATIVA DE QUEMU QUEMU LTDA (COSYPRO)", "cuit": "30-54574548-4", "iva": "Responsable Inscripto", "dir": "25 DE MAYO Y ALVEAR 138", "loc": "QUEMU QUEMU - La Pampa"}, {"nombre": "COOPERATIVA DE SERVICIOS DE SAN BASILIO. COSBAL", "cuit": "30-54583591-2", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 330", "loc": "SAN BASILIO - Cordoba"}, {"nombre": "COOPERATIVA DE SERVICIOS DE VILLA GENERAL BELGRANO", "cuit": "30-54570676-4", "iva": "Responsable Inscripto", "dir": "LOS CEREZOS 44", "loc": "VILLA GENERAL BELGRANO - Cordoba"}, {"nombre": "COOPERATIVA DE TRABAJO CRISTO OBRARO LTDA", "cuit": "30-70926543-8", "iva": "Responsable Inscripto", "dir": "SALTA 2371", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "COOPERATIVA DE TRABAJO LARA LIMITADA", "cuit": "30-71189988-6", "iva": "Responsable Inscripto", "dir": "BELGRANO 622 Piso:4 Dpto:A", "loc": "AVELLANEDA - Buenos Aires"}, {"nombre": "COOPERATIVA ELECTRICA DE CARLOS TEJEDOR", "cuit": "30-54571525-9", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 240", "loc": "CARLOS TEJEDOR - Buenos Aires"}, {"nombre": "COOPERATIVA ELECTRICA DE FERRE LTDA.", "cuit": "30-54575480-7", "iva": "Responsable Inscripto", "dir": "LA PAMPA 74", "loc": "FERRE - Buenos Aires"}, {"nombre": "COOPERATIVA ELECTRICA DE GALVEZ LIMITADA", "cuit": "30-54571792-8", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 106", "loc": "GALVEZ - Santa Fe"}, {"nombre": "COOPERATIVA ELECTRICA DE GOBERNADOR UGARTE", "cuit": "30-54574869-6", "iva": "Responsable Inscripto", "dir": "PLANTA URBANA", "loc": "GOBERNADOR UGARTE - Buenos Aires"}, {"nombre": "COOPERATIVA ELECTRICA DE TIMOTE LIMITADA", "cuit": "30-54579604-6", "iva": "Responsable Inscripto", "dir": "LEOPOLDO LUGONES", "loc": "TIMOTE - Buenos Aires"}, {"nombre": "COOPERATIVA LIMITADA DE ELECTRICIDAD DE GUATIMOZIN", "cuit": "30-54571457-0", "iva": "Responsable Inscripto", "dir": "CATAMARCA 215", "loc": "GUATIMOZIN - Cordoba"}, {"nombre": "COOPERATIVA OBRAS Y SERVICIO PUBLICOS RIO TALA", "cuit": "30-61580376-2", "iva": "Responsable Inscripto", "dir": "CAMELINO", "loc": "RIO TALA - Buenos Aires"}, {"nombre": "COOPERATIVA TELEFONICA DE PERICO LIMITADA", "cuit": "30-56653531-5", "iva": "Responsable Inscripto", "dir": "9 DE JULIO 150", "loc": "PERICO - Jujuy"}, {"nombre": "COOPERATIVA TELEFONICA DE TOSTADO", "cuit": "30-54583621-8", "iva": "Responsable Inscripto", "dir": "SARMIENTO 1368", "loc": "TOSTADO - Santa Fe"}, {"nombre": "COOPERATIVA TELEFONICA SANTA MARIA LTADA", "cuit": "33-56436534-9", "iva": "Responsable Inscripto", "dir": "BELGRANO 103", "loc": "SANTA MARIA - Catamarca"}, {"nombre": "COOPESCREVI SAN GREGORIO", "cuit": "30-54575640-0", "iva": "Responsable Inscripto", "dir": "SARMIENTO 420", "loc": "SAN GREGORIO - Santa Fe"}, {"nombre": "COOPI COOP. SERVICIOS DE VILLA CARLOS PAZ", "cuit": "30-54581670-5", "iva": "Responsable Inscripto", "dir": "MORENO 78", "loc": "CARLOS PAZ - Cordoba"}, {"nombre": "COOTELSER LTDA", "cuit": "30-54580172-4", "iva": "Responsable Inscripto", "dir": "VENECIA 1101", "loc": "SANTA CLARA DEL MAR - Buenos Aires"}, {"nombre": "CORONA DE SERVICIOS PUBLICOS DE SARMIENTO LTDA", "cuit": "30-54571921-1", "iva": "Responsable Inscripto", "dir": "ROCA 663", "loc": "ROSARIO - Santa Fe"}, {"nombre": "CORREA, GUSTAVO ARIEL", "cuit": "20-26878695-4", "iva": "Responsable Inscripto", "dir": "URUGUAY MZA C CASA 6", "loc": "MEDIA AGUA - San Juan"}, {"nombre": "COSEGU COOP DE GUATRACHE", "cuit": "30-54573873-9", "iva": "Responsable Inscripto", "dir": "JULIO A ROCA 209", "loc": "GUATRACHE - La Pampa"}, {"nombre": "COSPUL", "cuit": "30-58126660-6", "iva": "Responsable Inscripto", "dir": "GENERAL PAZ 158", "loc": "LEONES - Cordoba"}, {"nombre": "COSTANTINO DANA", "cuit": "27-28077283-1", "iva": "Responsable Inscripto", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "COTELCAM", "cuit": "30-55975906-2", "iva": "Responsable Inscripto", "dir": "QUIRNO COSTA 3318", "loc": "SUCURSAL EL TALAR - Buenos Aires"}, {"nombre": "COTELMAS", "cuit": "30-54583850-4", "iva": "Responsable Inscripto", "dir": "COLON 801", "loc": "MARIA SUSANA - Santa Fe"}, {"nombre": "COZZARI SERGIO", "cuit": "20-20169117-7", "iva": "Responsable Inscripto", "dir": "", "loc": "RIVADAVIA - San Juan"}, {"nombre": "CSDNET SERVICIOS DIGITALES S.R.L.", "cuit": "33-70810015-9", "iva": "Responsable Inscripto", "dir": "Bvard. Belgrano 477", "loc": "CALCHAQUI - Santa Fe"}, {"nombre": "CURACO SOCIEDAD ANONIMA", "cuit": "33-70813108-9", "iva": "Responsable Inscripto", "dir": "AV. SESQUICENTENARIO 1701", "loc": "GRAND BOURG - Buenos Aires"}, {"nombre": "CUSADEL INTERNET S. R. L.", "cuit": "30-71881218-2", "iva": "Responsable Inscripto", "dir": "PARAGUAY 1416", "loc": "ROSARIO - Santa Fe"}, {"nombre": "CUSATO, VICENTE EZEQUIEL", "cuit": "20-35703512-1", "iva": "Responsable Inscripto", "dir": "CIPRIANO BENITEZ 3420", "loc": "ROSARIO - Santa Fe"}, {"nombre": "CV SARMIENTO S.A.S", "cuit": "30-71681495-1", "iva": "Responsable Inscripto", "dir": "AGUERO 2157 Piso:903", "loc": "CABA - Capital Federal"}, {"nombre": "CVCA SRL", "cuit": "30-70984725-9", "iva": "Responsable Inscripto", "dir": "san martin 860", "loc": "CRUZ ALTA - Cordoba"}, {"nombre": "Coop Telef de Serv Púb y Com de Villa del Totoral", "cuit": "30-58058976-2", "iva": "Responsable Inscripto", "dir": "PRESIDENTE PERON 551", "loc": "VILLA TOTORAL - Cordoba"}, {"nombre": "DA ROSA MIGUEL ALBERTO", "cuit": "20-25169290-5", "iva": "Responsable Inscripto", "dir": "JUJUY 565", "loc": "GARIN - Buenos Aires"}, {"nombre": "DABIN, PABLO", "cuit": "20-23206950-4", "iva": "Responsable Inscripto", "dir": "Ruta 12 Km. 463", "loc": "LA PICADA - Entre Rios"}, {"nombre": "DATALINK SRL", "cuit": "30-71178171-0", "iva": "Responsable Inscripto", "dir": "AV. MAIPU 1343", "loc": "TOTORAS - Santa Fe"}, {"nombre": "DATOS NET DEL SUR S.R.L.", "cuit": "30-71698387-7", "iva": "Responsable Inscripto", "dir": "CALLE 50 8 105", "loc": "LA PLATA - Buenos Aires"}, {"nombre": "DECUMANUS SA", "cuit": "30-71027165-4", "iva": "Responsable Inscripto", "dir": "BELGRANO 332", "loc": "BERNAL - Buenos Aires"}, {"nombre": "DELCO IMAGEN S.A.", "cuit": "30-64370651-9", "iva": "Responsable Inscripto", "dir": "3 DE FEBRERO 500", "loc": "ROSARIO DEL TALA - Entre Rios"}, {"nombre": "DEPOT SRL", "cuit": "30-71493100-4", "iva": "Responsable Inscripto", "dir": "SARMIENTO 1199", "loc": "TANDIL - Buenos Aires"}, {"nombre": "DERANET COMUNICACIONES S.A.S", "cuit": "33-71753183-9", "iva": "Responsable Inscripto", "dir": "VETERANOS DE MALVINAS 1375", "loc": "COLONIA CAROYA - Cordoba"}, {"nombre": "DIAZ CESAR JAVIER", "cuit": "20-27748794-3", "iva": "Responsable Inscripto", "dir": "CATAMARCA 1285 Piso:1 Dpto:D", "loc": "ROSARIO - Santa Fe"}, {"nombre": "DIAZ, CELIA BELEN", "cuit": "27-33815507-2", "iva": "Responsable Inscripto", "dir": "BELGICA 2989", "loc": "YERBA BUENA - Tucuman"}, {"nombre": "DIAZ, GONZALO JAVIER", "cuit": "23-36011587-9", "iva": "Monotributista", "dir": "ALVEAR 7929", "loc": "SANTA FE - Santa Fe"}, {"nombre": "DOVA SRL", "cuit": "30-70930172-8", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 2211", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "EDUARDO, NARVAY", "cuit": "20-22257211-9", "iva": "Responsable Inscripto", "dir": "PRESIDENTE PERON 1965", "loc": "SANTA ELENA - Entre Rios"}, {"nombre": "EL GRAN PORTAL S.R.L.", "cuit": "30-71087153-8", "iva": "Responsable Inscripto", "dir": "LA BUITRERA", "loc": "LAS LAJAS - Neuquen"}, {"nombre": "EL TALA NET S. A", "cuit": "33-71754169-9", "iva": "Responsable Inscripto", "dir": "AVENIDA RACEDO 198", "loc": "CERRITO - Entre Rios"}, {"nombre": "EMPRENDIMIENTOS COMUNICACIONALES SRL", "cuit": "30-69060913-0", "iva": "Responsable Inscripto", "dir": "LIBERTADOR DEL A 5040 P1 B", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "EMPRESA DE TELECOMUNICACIONES DE CALETA OLIVIA", "cuit": "30-71141716-4", "iva": "Responsable Inscripto", "dir": "MOSCONI 1500 ESQ SALABERRY", "loc": "CALETA OLIVIA - Santa Cruz"}, {"nombre": "EN LINEA DIGITAL S.R.L.", "cuit": "30-71703947-1", "iva": "Responsable Inscripto", "dir": "", "loc": "CERRITO - Entre Rios"}, {"nombre": "ENLINEA S. A. S.", "cuit": "30-71759135-2", "iva": "Responsable Inscripto", "dir": "ALMAFUERTE - RUTA 12 KM 463", "loc": "ROSARIO - Santa Fe"}, {"nombre": "ESCUDERO JULIO CESAR", "cuit": "20-14978176-6", "iva": "Responsable Inscripto", "dir": "", "loc": "GUAYMALLEN - Mendoza"}, {"nombre": "ETHERNET SAS", "cuit": "30-71625858-7", "iva": "Responsable Inscripto", "dir": "San Juan 11347", "loc": "Los Corralitos - Mendoza"}, {"nombre": "EYCOM SRL", "cuit": "30-71006213-3", "iva": "Responsable Inscripto", "dir": "MARCELO GAMBOA 6314", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "FANY LABRADA", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "FASE CUATRO", "cuit": "30-71664065-1", "iva": "Responsable Inscripto", "dir": "RIVAROLA 18 Piso:1 Dpto:5", "loc": "PEHUAJO - Buenos Aires"}, {"nombre": "FASTER S.R.L", "cuit": "30-70898589-5", "iva": "Responsable Inscripto", "dir": "9 DE JULIO 301", "loc": "VIALE - Entre Rios"}, {"nombre": "FASTWAY S. R. L.", "cuit": "30-71725485-2", "iva": "Responsable Inscripto", "dir": "MORENO ESQ 25 MAYO", "loc": "TRES ISLETAS - Chaco"}, {"nombre": "FELDMAN MARCELO", "cuit": "", "iva": "Responsable Inscripto", "dir": "CASTELLANO 305", "loc": "LAS HERAS - Mendoza"}, {"nombre": "FERNANDEZ CESAR AUGUSTO", "cuit": "20-26290837-3", "iva": "Monotributista", "dir": "RAMON CLERO AHUMADA", "loc": "LA MERCED - Catamarca"}, {"nombre": "FERNANDEZ CRISTIAN MARTIN", "cuit": "20-27882285-1", "iva": "Monotributista", "dir": "AVDA.PRESIDENTE CASTILLO 254", "loc": "VALLE VIEJO - Catamarca"}, {"nombre": "FERNANDEZ MARCELO JAVIER", "cuit": "20-27454294-3", "iva": "Responsable Inscripto", "dir": "CASTELLANO 305", "loc": "LAS HERAS - Mendoza"}, {"nombre": "FERNANDEZ MARTIN GABRIEL", "cuit": "20-26852556-5", "iva": "Monotributista", "dir": "BARROS 423", "loc": "ROJAS - Buenos Aires"}, {"nombre": "FERNANDEZ REINA MARIA BELEN", "cuit": "23-36108826-3", "iva": "Responsable Inscripto", "dir": "Fleming 170", "loc": "COLONIAS UNIDAS - Chaco"}, {"nombre": "FIBERWEST SRL", "cuit": "30-71707394-7", "iva": "Responsable Inscripto", "dir": "MIGUEL ANGEL RODRIGUEZ 6090", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "FIONET S.A", "cuit": "30-71671236-9", "iva": "Responsable Inscripto", "dir": "NECOCHEA 1837", "loc": "CORRIENTES - Corrientes"}, {"nombre": "FLOR LANUSSE", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "FLORENTIN, JUAN PABLO", "cuit": "20-29952672-1", "iva": "Responsable Inscripto", "dir": "Matorras de s Martin 10017", "loc": "MORENO - Buenos Aires"}, {"nombre": "FLY NET S.R.L.", "cuit": "30-71505901-7", "iva": "Responsable Inscripto", "dir": "Av. Rivadavia 536", "loc": "EL SOBERBIO - Misiones"}, {"nombre": "FONE GALETI S.R.L.", "cuit": "30-71040514-6", "iva": "Responsable Inscripto", "dir": "LAVALLE 3405", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "FORTINI MAURO DANIEL", "cuit": "20-29456274-6", "iva": "Responsable Inscripto", "dir": "", "loc": "VILLA DOLORES - Cordoba"}, {"nombre": "FRACCAROLI LISANDRO DAMIAN", "cuit": "20-34939196-2", "iva": "Responsable Inscripto", "dir": "JEAN JAURES 2169", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "FRACCAROLI LISANDRO DAMIAN", "cuit": "20-34939196-2", "iva": "Responsable Inscripto", "dir": "JEAN JAURES 2169", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "FRACCAROLI RAMON LUIS", "cuit": "20-18622786-8", "iva": "Monotributista", "dir": "JEAN JAURES 2169", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "FRAGARIA S.A.", "cuit": "30-63076673-3", "iva": "Responsable Inscripto", "dir": "CALLE 57 93", "loc": "VILLA CAÑAS - Santa Fe"}, {"nombre": "FRANCO JONATAN ALEJANDRO", "cuit": "20-32497666-4", "iva": "Responsable Inscripto", "dir": "MIGUEL ANGEL RODRIGUEZ 6090", "loc": "MERLO - Buenos Aires"}, {"nombre": "FULL DATOS", "cuit": "30-71611813-0", "iva": "Responsable Inscripto", "dir": "8 105", "loc": "LA PLATA - Buenos Aires"}, {"nombre": "GABRIEL GABRIELA VANESA", "cuit": "27-25871980-3", "iva": "Responsable Inscripto", "dir": "GENERAL PAUNERO 86", "loc": "VILLA CONSTITUCION - Santa Fe"}, {"nombre": "GABRIEL HORACIO RUFFINI", "cuit": "20-21517858-8", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "GAITAN JOSE LUIS", "cuit": "20-33044584-0", "iva": "Responsable Inscripto", "dir": "EL RINCON 58", "loc": "CHILECITO - La Rioja"}, {"nombre": "GALLONI MAZANOWICZ PABLO ALEJANDRO", "cuit": "20-32804473-1", "iva": "Responsable Inscripto", "dir": "B° 26 DE MARZO MZA 21B LOTE 14", "loc": "CERRILLOS - Salta"}, {"nombre": "GARABAGLIA NAHUEL RICARDO", "cuit": "20-24872544-4", "iva": "Responsable Inscripto", "dir": "RAMON FREIRE 1865", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "GARAY ANGEL ROQUE", "cuit": "20-21768063-9", "iva": "Responsable Inscripto", "dir": "AVDA. SARGENTO CABRAL 187", "loc": "CAMPO SANTO - Salta"}, {"nombre": "GARCIA LEANDRO", "cuit": "", "iva": "Responsable Inscripto", "dir": "", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "GASPARINI JORGE NICOLAS", "cuit": "20-26854638-4", "iva": "Responsable Inscripto", "dir": "CALLE 1 LOTE 2 M:24", "loc": "AÑELO - Neuquen"}, {"nombre": "GAVILAN, MARCELO", "cuit": "20-24774283-3", "iva": "Responsable Inscripto", "dir": "AV. PTE PERON 1877", "loc": "SANTA ELENA - Entre Rios"}, {"nombre": "GECOMNET SRL", "cuit": "30-71706321-6", "iva": "Responsable Inscripto", "dir": "DONADO AGUSTIN JOSE 270", "loc": "ROSARIO - Santa Fe"}, {"nombre": "GENOVESE, ALBERTO OSCAR", "cuit": "20-08281257-2", "iva": "Responsable Inscripto", "dir": "AVDA RIVADAVIA 1184", "loc": "TOSTADO - Santa Fe"}, {"nombre": "GEREZ DIEGO DEL JESUS", "cuit": "20-29650703-3", "iva": "Responsable Inscripto", "dir": "CARLOS PELLEGRINI", "loc": "MONTE QUEMADO - Santiago Del Estero"}, {"nombre": "GLNET S.R.L", "cuit": "30-71109854-9", "iva": "Responsable Inscripto", "dir": "LOPEZ OSORNIO 615", "loc": "GENERAL LAMADRID - Buenos Aires"}, {"nombre": "GODOY DIEGO HERNAN", "cuit": "24-22923475-3", "iva": "Responsable Inscripto", "dir": "UF 87 BEJARANO 2419", "loc": "NEUQUEN - Neuquen"}, {"nombre": "GOLDWASSER HERNAN MATIAS", "cuit": "20-26737307-9", "iva": "Responsable Inscripto", "dir": "AV. SAN MARTIN 1220", "loc": "SAN MARTIN - Buenos Aires"}, {"nombre": "GOMEZ LEANDRO SEBASTIAN", "cuit": "20-26522695-8", "iva": "Responsable Inscripto", "dir": "YRIGOYEN HIPOLITO 2112 Piso:6 Dpto:26", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "GONZALEZ GUSTAVO", "cuit": "20-20561318-9", "iva": "Responsable Inscripto", "dir": "Onofre Rey 995", "loc": "SANTA ROSA - La Pampa"}, {"nombre": "GONZALEZ, IDALINA", "cuit": "27-13648956-4", "iva": "Monotributista", "dir": "SAN MARTIN 540", "loc": "RIO DE CAA CATI - Corrientes"}, {"nombre": "GONZALEZ, MARIA NORBERTA", "cuit": "27-14648987-2", "iva": "Responsable Inscripto", "dir": "9 DE JULIO 1045", "loc": "SANTA ELENA - Entre Rios"}, {"nombre": "GOW INTERNET SRL", "cuit": "30-71209429-6", "iva": "Responsable Inscripto", "dir": "AV JOSE MARIA MORENO 454 8VO A", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "GRAMAGLIA VIVIANA MONICA", "cuit": "23-14818789-4", "iva": "Responsable Inscripto", "dir": "FRANCIA 1109", "loc": "LUJAN - Buenos Aires"}, {"nombre": "GRUPO BARONE SRL", "cuit": "30-71246883-8", "iva": "Responsable Inscripto", "dir": "OBLIGADO 147", "loc": "SAN NICOLAS - Buenos Aires"}, {"nombre": "GRUPO SERVICIOS JUNIN S A", "cuit": "30-66554905-0", "iva": "Responsable Inscripto", "dir": "CNEL. SUAREZ 27", "loc": "JUNIN - Buenos Aires"}, {"nombre": "GRUPO SIERRA SRL", "cuit": "30-70811074-0", "iva": "Responsable Inscripto", "dir": "ANGELA 192", "loc": "SIERRA DE LOS PADRES - Buenos Aires"}, {"nombre": "GUAZU GROUP S.R.L", "cuit": "30-70874425-1", "iva": "Responsable Inscripto", "dir": "MARIANO I LOZA 744", "loc": "GOYA - Corrientes"}, {"nombre": "GUERRA LIDIA ROXANA", "cuit": "27-21897206-9", "iva": "Responsable Inscripto", "dir": "PJE ARNOLDO GAMBARTE", "loc": "MONTE QUEMADO - Santiago Del Estero"}, {"nombre": "GUILERA ADRIAN OMAR", "cuit": "20-24512893-3", "iva": "Responsable Inscripto", "dir": "SOLIS 735", "loc": "ROJAS - Buenos Aires"}, {"nombre": "GUTIERREZ, JORGE JAVIER", "cuit": "20-27430753-7", "iva": "Responsable Inscripto", "dir": "Av. Belgrano 243", "loc": "FRAILE PINTADO - Jujuy"}, {"nombre": "H.M. NET S.R.L.", "cuit": "33-71777127-9", "iva": "Responsable Inscripto", "dir": "GASCON 619", "loc": "CIUDAD AUT. DE BS AS - Capital Federal"}, {"nombre": "HERMAN, GLADYS BEATRIZ", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "HERNANDEZ JOSE LUIS", "cuit": "20-30769716-6", "iva": "Monotributista", "dir": "FINCA SAN LUIS S/N", "loc": "COLOMBRES - Tucuman"}, {"nombre": "HERRERA MARIO RICARDO", "cuit": "20-27122932-2", "iva": "Responsable Inscripto", "dir": "GARAY 1235", "loc": "LA BANDA - Santiago Del Estero"}, {"nombre": "HITECNO S.A.", "cuit": "33-71173027-9", "iva": "Responsable Inscripto", "dir": "OBLIGADO R.-AV.COST.", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "HOLAMUNDO S.R.L.", "cuit": "30-71401691-8", "iva": "Responsable Inscripto", "dir": "NACION 332", "loc": "SAN NICOLAS - Buenos Aires"}, {"nombre": "HULNIK, CESAR DAVID", "cuit": "20-22777633-2", "iva": "Responsable Inscripto", "dir": "27 DE FEBRERO 1211", "loc": "ROSARIO - Santa Fe"}, {"nombre": "IBARGUREN MARTIN GUILLERMMO", "cuit": "20-23834772-7", "iva": "Responsable Inscripto", "dir": "CORDOBA 321", "loc": "MONTE GRANDE - Buenos Aires"}, {"nombre": "ICT NET S.A", "cuit": "30-70848247-8", "iva": "Responsable Inscripto", "dir": "O. CESAR 512", "loc": "SAN PEDRO - Buenos Aires"}, {"nombre": "INFINITEL SRL", "cuit": "30-71564795-4", "iva": "Responsable Inscripto", "dir": "CONGRESO AV. 5725", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "INNOVACIONES TECNOLOGICAS S.A.", "cuit": "30-71601205-7", "iva": "Responsable Inscripto", "dir": "CERRITO 1320 Piso:5 Dpto:C", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "INNOVATION SRL", "cuit": "30-71156068-4", "iva": "Responsable Inscripto", "dir": "PARAGUAY 2377", "loc": "SAN FRANCISCO - Cordoba"}, {"nombre": "INSAURRALDE CLAUDIO OSCAR", "cuit": "20-30478720-2", "iva": "Responsable Inscripto", "dir": "MZ 04 PC 04 AV. EDISON Y LAPACHO", "loc": "ROSARIO - Santa Fe"}, {"nombre": "INTEGRAL INSUMOS SOC COLECTIVA", "cuit": "33-64023005-9", "iva": "Responsable Inscripto", "dir": "TTE GRAL RICHIER 68", "loc": "SUNCHALES - Santa Fe"}, {"nombre": "INTER D.J. S.A.", "cuit": "30-71702519-5", "iva": "Responsable Inscripto", "dir": "RAMON FRANCO 6229 Piso:12 Dpto:D", "loc": "WILDE - Buenos Aires"}, {"nombre": "INTER TECH SH", "cuit": "30-71514475-8", "iva": "Responsable Inscripto", "dir": "1 DE MAYO 107 DPTO 3", "loc": "VILLA ANGELA - Chaco"}, {"nombre": "INTERBAP S.R.L", "cuit": "30-71723131-3", "iva": "Responsable Inscripto", "dir": "EL PROFETA DE LA PAMPA 4552 Piso:1 Dpto:7", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "INTERCABLE TELEVISORA COLOR SOC ANONIMA", "cuit": "30-68071253-7", "iva": "Responsable Inscripto", "dir": "LIBERTADOR DEL AV. 6810 Piso:10 Dpto:A", "loc": "ROSARIO - Santa Fe"}, {"nombre": "INTERCITY COMUNICACIONES SA", "cuit": "30-70959404-0", "iva": "Responsable Inscripto", "dir": "AV. ITALIA 1837", "loc": "RIO CUARTO - Cordoba"}, {"nombre": "INTERCITY S.R.L", "cuit": "30-70814880-2", "iva": "Responsable Inscripto", "dir": "AVENIDA ITALIA 1837", "loc": "RIO CUARTO - Cordoba"}, {"nombre": "INTERNET CORDOBA S.A.S.", "cuit": "30-71620637-4", "iva": "Responsable Inscripto", "dir": "CABALANGO 4122", "loc": "CORDOBA - Cordoba"}, {"nombre": "INTERNET SERVICES SA", "cuit": "30-68297080-0", "iva": "Responsable Inscripto", "dir": "ECHEVERRIA 2578 Piso:1 Dpto:108", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "INTERRET VILLA ANGELA SRL", "cuit": "30-69674185-5", "iva": "Responsable Inscripto", "dir": "25 DE MAYO 555", "loc": "VILLA ANGELA - Chaco"}, {"nombre": "INTRANET WIFI", "cuit": "30-71571864-9", "iva": "Responsable Inscripto", "dir": "CHUBUT 360", "loc": "GAIMAN - Chubut"}, {"nombre": "INVERNIZZI VICTORIA NOEMI", "cuit": "27-32229401-3", "iva": "Responsable Inscripto", "dir": "Chile 450 Gral San Martín", "loc": "GENERAL JOSE DE SAN MARTIN - Chaco"}, {"nombre": "IP RED SRL", "cuit": "30-71124624-6", "iva": "Responsable Inscripto", "dir": "MAIPÚ 140", "loc": "GENERAL LAGOS - Santa Fe"}, {"nombre": "IPERACTIVE S.A.", "cuit": "30-70905985-4", "iva": "Responsable Inscripto", "dir": "URQUIZA 2345", "loc": "OLAVARRIA - Buenos Aires"}, {"nombre": "IPV6 SRL", "cuit": "30-71461672-9", "iva": "Responsable Inscripto", "dir": "Calle 48 nro 632 piso 11", "loc": "LA PLATA - Buenos Aires"}, {"nombre": "ISOLA LEONEL JORDAN", "cuit": "23-35733076-9", "iva": "Responsable Inscripto", "dir": "CORDOBA 480", "loc": "MARIA TERESA - Santa Fe"}, {"nombre": "ITEL S.A.", "cuit": "30-70999676-9", "iva": "Responsable Inscripto", "dir": "ENTRE RIOS 2710 Dpto:2", "loc": "CHAJARI - Entre Rios"}, {"nombre": "JL FIBERMORE S.A", "cuit": "30-71606404-9", "iva": "Responsable Inscripto", "dir": "LOS ALAMOS 2452", "loc": "PILAR - Buenos Aires"}, {"nombre": "JOMÑUK GASTON FLABIAN", "cuit": "23-26580546-9", "iva": "Responsable Inscripto", "dir": "MARTIN FIERRO 143", "loc": "LOS ANTIGUOS - Santa Cruz"}, {"nombre": "JS NET SOCIEDAD ANONIMA", "cuit": "30-70870371-7", "iva": "Responsable Inscripto", "dir": "ESPAÑA N° 62", "loc": "ROSARIO - Santa Fe"}, {"nombre": "JUAREZ CARLOS ENRIQUE", "cuit": "", "iva": "Consumidor Final", "dir": "Guatemala 1212", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "JUAREZ VICENTE MIGUEL", "cuit": "20-26962408-7", "iva": "Responsable Inscripto", "dir": "AVDA. SAN MARTIN 216", "loc": "LA QUIACA - Jujuy"}, {"nombre": "JUMPNET SOLUCIONES DE INTERNET S.R.L.", "cuit": "30-71183404-0", "iva": "Responsable Inscripto", "dir": "MAURE 2426", "loc": "PABLO NOGUES - Buenos Aires"}, {"nombre": "LABORDA JUAN SEBASTIAN", "cuit": "20-27606080-6", "iva": "Responsable Inscripto", "dir": "BUENOS AIRES 817", "loc": "RINCON DE LOS SAUCES - Neuquen"}, {"nombre": "LAS ROSAS CABLEVISION SRL", "cuit": "30-67487497-5", "iva": "Responsable Inscripto", "dir": "RIO NEGRO 779", "loc": "EL TREBOL - Santa Fe"}, {"nombre": "LAZARO JUAN IGNACIO", "cuit": "20-28489089-3", "iva": "Responsable Inscripto", "dir": "LOS ALAMOS", "loc": "PILAR - Buenos Aires"}, {"nombre": "LEAL HERMAN AUGUSTO", "cuit": "20-35755748-9", "iva": "Consumidor Final", "dir": "Vieytes 10131", "loc": "MORENO - Buenos Aires"}, {"nombre": "LEF INTERNET S. R. L", "cuit": "30-71877058-7", "iva": "Responsable Inscripto", "dir": "JUAN DOMINGO PERON 2817", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "LEGUIZA ALFREDO", "cuit": "20-26001151-1", "iva": "Monotributista", "dir": "RAFAEL NUÑEZ", "loc": "SAN CARLOS MINAS - Cordoba"}, {"nombre": "LEIRIA, HUGO LEANDRO", "cuit": "20-29102690-8", "iva": "Responsable Inscripto", "dir": "AVENIDA MENDOZA (SUR) 4340", "loc": "SAN JUAN - San Juan"}, {"nombre": "LEMMON INTERNET SRL", "cuit": "30-71685252-7", "iva": "Responsable Inscripto", "dir": "SANTIAGO 1256", "loc": "ROSARIO - Santa Fe"}, {"nombre": "LENZ, MARIA AMELIA", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "LINKSAT CORDOBA S.A.S", "cuit": "30-71681960-0", "iva": "Responsable Inscripto", "dir": "CALLE 3 140", "loc": "VILLA PARQUE SANTA ANA - Cordoba"}, {"nombre": "LIRIA CARLOS ALBERTO", "cuit": "20-17868848-1", "iva": "Responsable Inscripto", "dir": "TENIENTE IBAÑEZ ESQ SARMIENTO 617", "loc": "CIPOLLETTI - Rio Negro"}, {"nombre": "LIUTKEVIER, MARCELO ALEJANDRO", "cuit": "20-24040166-6", "iva": "Responsable Inscripto", "dir": "MARINERO PANNO 946", "loc": "VILLA RAMALLO - Buenos Aires"}, {"nombre": "LOPEZ EDGARDO ULISES", "cuit": "20-26909775-3", "iva": "Monotributista", "dir": "CARLOS DURAND 797", "loc": "BELLA VISTA - Buenos Aires"}, {"nombre": "LOPEZ MIY MONICA ALICIA", "cuit": "27-27910542-2", "iva": "Responsable Inscripto", "dir": "EUGENIO MENDEZ 502", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "LOPEZ TOBIAS FERNANDO DANIE", "cuit": "20-31312527-1", "iva": "Responsable Inscripto", "dir": "MITRE 77", "loc": "METAN - Salta"}, {"nombre": "LOSELOAS SA", "cuit": "30-70969771-0", "iva": "Responsable Inscripto", "dir": "ACCESO SUR 106", "loc": "SAN GREGORIO - Santa Fe"}, {"nombre": "LOVERA LEONARDO MIGUEL", "cuit": "20-22306565-2", "iva": "Responsable Inscripto", "dir": "COSTA RICA 693", "loc": "SAN FRANCISCO - Cordoba"}, {"nombre": "LUBACOM S. R. L.", "cuit": "30-71740054-9", "iva": "Responsable Inscripto", "dir": "TARRAGONA 451", "loc": "ROSARIO - Santa Fe"}, {"nombre": "LUQUE MAXIMILIANO GERMAN", "cuit": "20-35860680-7", "iva": "Responsable Inscripto", "dir": "PARAGUAY 2238 Piso:2 Dpto:5", "loc": "SAN JUSTO - Buenos Aires"}, {"nombre": "LYCH NETWORK S.A", "cuit": "30-71813626-8", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 1336", "loc": "BRAGADO - Buenos Aires"}, {"nombre": "MACCAGNO, VICTORIO MARCELO", "cuit": "20-39785514-8", "iva": "Monotributista", "dir": "AMEGHINO 36", "loc": "PERGAMINO - Buenos Aires"}, {"nombre": "MADACOM SRL", "cuit": "30-70902384-1", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 412", "loc": "MAGDALENA - Buenos Aires"}, {"nombre": "MAGADAN, DANIEL OMAR", "cuit": "20-16935402-3", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 1086", "loc": "SAN GREGORIO - Santa Fe"}, {"nombre": "MALISANI, PABLO ADRIAN", "cuit": "20-25715650-9", "iva": "Monotributista", "dir": "J. M. DE ROSAS 1113 Piso:04 Dpto:B", "loc": "ROSARIO - Santa Fe"}, {"nombre": "MANSILLA ROXANA ALEJANDRA", "cuit": "23-23620933-4", "iva": "Responsable Inscripto", "dir": "BELGRANO 2576", "loc": "ESPERANZA - Santa Fe"}, {"nombre": "MARECHAL DANIEL", "cuit": "20-24872350-6", "iva": "Consumidor Final", "dir": "TABLADA 6727", "loc": "MORENO - Buenos Aires"}, {"nombre": "MARIA DE LOS ANGELES ALEGRE", "cuit": "27-33239526-8", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "MARINO, CESAR CLEMENTE", "cuit": "20-17575592-7", "iva": "Responsable Inscripto", "dir": "IRIGOYEN 938", "loc": "AYACUCHO - Buenos Aires"}, {"nombre": "MARKETING DIRECTO SRL", "cuit": "30-69550313-6", "iva": "Responsable Inscripto", "dir": "Zamudio 3134", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "MAYSETEC S.A", "cuit": "30-71579029-3", "iva": "Responsable Inscripto", "dir": "EVA DUARTE 1727", "loc": "MARCOS PAZ - Buenos Aires"}, {"nombre": "MEDITEL REDES FTTH S.R.L", "cuit": "30-71458212-3", "iva": "Responsable Inscripto", "dir": "Avenida Congreso 5725", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "MEGA COMUNICACIONES SRL", "cuit": "30-71118417-8", "iva": "Responsable Inscripto", "dir": "ZURITA 657", "loc": "CATAMARCA - Catamarca"}, {"nombre": "MENEL MAXIMILIANO", "cuit": "20-30569328-7", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "MERCADO MAURICIO HERNAN", "cuit": "23-32095528-9", "iva": "Responsable Inscripto", "dir": "AV. SARMIENTO", "loc": "JUAN BAUTISTA ALBERD - Tucuman"}, {"nombre": "MEZA ALBERTO", "cuit": "20-34634900-0", "iva": "Responsable Inscripto", "dir": "SAN ISIDRO 174", "loc": "FRAILE PINTADO - Jujuy"}, {"nombre": "MILCIADE, ALVAREZ", "cuit": "20-13503457-7", "iva": "Responsable Inscripto", "dir": "ruggiero 815", "loc": "FORMOSA - Formosa"}, {"nombre": "MIQUEL SEBASTIAN DAVID", "cuit": "23-24675515-9", "iva": "Consumidor Final", "dir": "SAN JUAN 5351", "loc": "ROSARIO - Santa Fe"}, {"nombre": "MOLINARI FERNANDO MANUEL", "cuit": "20-34397703-5", "iva": "Consumidor Final", "dir": "GREGORIO LAS HERAS (OESTE) 1296", "loc": "SAN JUAN - San Juan"}, {"nombre": "MOLINARI FERNANDO MARIA EUGENIA", "cuit": "27-35569255-3", "iva": "Responsable Inscripto", "dir": "Alte Brown 1249", "loc": "Puerto Deseada - Santa Cruz"}, {"nombre": "MONTES DE OCA BLANCA", "cuit": "27-12349141-1", "iva": "Responsable Inscripto", "dir": "Libertad 342", "loc": "LAMARQUE - Rio Negro"}, {"nombre": "MONZALBETE JUAN IGNACIO", "cuit": "20-27151848-0", "iva": "Responsable Inscripto", "dir": "27 de abril 394", "loc": "LA BANDA - Santiago Del Estero"}, {"nombre": "MORENO AGUILERA, NOEMI DEL VALLE", "cuit": "27-12017584-5", "iva": "Responsable Inscripto", "dir": "9 DE JULIO 329", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "MOSSO RUBEN OSCAR", "cuit": "20-14732395-7", "iva": "Responsable Inscripto", "dir": "AVENIDA INGENIERO MAÑANES 726", "loc": "GENERAL JOSE DE SAN MARTIN - Chaco"}, {"nombre": "MP STRUMBO TELECOMUNICACIONES S.R.L", "cuit": "33-71487101-9", "iva": "Responsable Inscripto", "dir": "PADILLA 1032 Piso:3 Dpto:B", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "MUNDELL, MARTIN EZEQUIEL", "cuit": "20-32113643-6", "iva": "Monotributista", "dir": "MARIANO MORENO 1396", "loc": "FUNES - Santa Fe"}, {"nombre": "MUNDELL, MAURICIO", "cuit": "20-30892048-9", "iva": "Responsable Inscripto", "dir": "ALFONSIN 2060", "loc": "FUNES - Santa Fe"}, {"nombre": "NEGOCIOS Y SERVICIOS S.A", "cuit": "30-64281320-6", "iva": "Responsable Inscripto", "dir": "PASAJE 6 LOCAL 60", "loc": "GENERAL SAN MARTIN - Mendoza"}, {"nombre": "NET NUEVE SAS", "cuit": "30-71685041-9", "iva": "Responsable Inscripto", "dir": "LA RIOJA 1787", "loc": "9 DE JULIO - Buenos Aires"}, {"nombre": "NETCOMM ARGENTINA SRL", "cuit": "30-70823528-4", "iva": "Responsable Inscripto", "dir": "", "loc": "VILLAGUAY - Entre Rios"}, {"nombre": "NETIUM S.A", "cuit": "30-70900503-7", "iva": "Responsable Inscripto", "dir": "URQUIZA 1254", "loc": "NOGOYA - Entre Rios"}, {"nombre": "NETLAGOS S. R. L.", "cuit": "30-71944770-4", "iva": "Responsable Inscripto", "dir": "FILIPPINI 2131 Piso:0 Dpto:2", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "NETPATAGONIA S.A.S.", "cuit": "30-71602342-3", "iva": "Responsable Inscripto", "dir": "HIPOLITO IRIGOYEN 1565", "loc": "GENERAL ROCA - Rio Negro"}, {"nombre": "NFIBRA S.A.S.", "cuit": "30-71681906-6", "iva": "Responsable Inscripto", "dir": "ALBERTI 304 Piso:10/D", "loc": "(2000) ROSARIO - Santa Fe"}, {"nombre": "NICOLAS VULGAN", "cuit": "20-34966423-3", "iva": "Responsable Inscripto", "dir": "9 de Julio 566", "loc": "San Bernardo - Chaco"}, {"nombre": "NIVEL 7 S.R.L.", "cuit": "30-71430319-4", "iva": "Responsable Inscripto", "dir": "", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "NIVEL SEVEN S.R.L.", "cuit": "30-71430319-4", "iva": "Responsable Inscripto", "dir": "", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "NODO 1 S.A.S.", "cuit": "30-71662366-8", "iva": "Responsable Inscripto", "dir": "", "loc": "CALETA OLIVIA - Santa Cruz"}, {"nombre": "NODOCOOP FEDERACION DE COOPERATIVAS Ltda", "cuit": "30-71018639-8", "iva": "Responsable Inscripto", "dir": "EL ROSEDAL 177", "loc": "ESPARTILLAR - Buenos Aires"}, {"nombre": "NOGUERA CRISTIAN JAVIER", "cuit": "20-37471245-5", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "NORTELEVISA SA", "cuit": "30-65682429-4", "iva": "Responsable Inscripto", "dir": "TALCAHUANO 38 Piso:3 Dpto:A", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "NOSTRAY, JULIO HORACIO", "cuit": "20-20580515-0", "iva": "Monotributista", "dir": "SAN JUAN 259", "loc": "JACHAL - San Juan"}, {"nombre": "NOVACOMISP S.R.L", "cuit": "30-71643828-3", "iva": "Responsable Inscripto", "dir": "Alte Brown 1249", "loc": "Puerto Deseada - Santa Cruz"}, {"nombre": "NOVATEG S. R. L", "cuit": "30-71727112-9", "iva": "Responsable Inscripto", "dir": "NICOLAS AVELLANEDA 64", "loc": "FORMOSA - Formosa"}, {"nombre": "NUÑEZ, MAURICIO MAXIMILIANO", "cuit": "20-35559273-2", "iva": "Responsable Inscripto", "dir": "TALA 2028", "loc": "CONCORDIA - Entre Rios"}, {"nombre": "OLIVARI MARIO RUBEN", "cuit": "20-13650802-5", "iva": "Responsable Inscripto", "dir": "ISLA DEL CERRITO 1488", "loc": "RESISTENCIA - Chaco"}, {"nombre": "OLMEDO ANDRES", "cuit": "20-30542272-0", "iva": "Responsable Inscripto", "dir": "Jaime de Nevares 347", "loc": "ANDACOLLO - Neuquen"}, {"nombre": "ORGANIZACION COMERCIAL DON TOMAS SRL", "cuit": "30-57084763-1", "iva": "Responsable Inscripto", "dir": "RUTA NACIONAL 22 ESTE 146", "loc": "GENERAL ROCA - Rio Negro"}, {"nombre": "PAEZ RIQUELME JUAN RAMON", "cuit": "23-25830417-9", "iva": "Responsable Inscripto", "dir": "PUBLICA 47", "loc": "CHEPES - La Rioja"}, {"nombre": "PAMPACOM S.R.L.", "cuit": "30-71014918-2", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 1276", "loc": "FIRMAT - Santa Fe"}, {"nombre": "PAZ, LUCIANO EMMANUEL", "cuit": "20-30460791-3", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 2465", "loc": "OLAVARRIA - Buenos Aires"}, {"nombre": "PC ASSI SRL.", "cuit": "30-71047272-2", "iva": "Responsable Inscripto", "dir": "ALBERDI 321", "loc": "SAN NICOLAS - Buenos Aires"}, {"nombre": "PENS DARIO EZEQUIEL", "cuit": "20-29331410-2", "iva": "Responsable Inscripto", "dir": "DIEGO DE CARVAJAL 83", "loc": "BARRIO PARQUE QUIRNO - Buenos Aires"}, {"nombre": "PERALTA, LUIS", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "PERESINI, ROGELIO DANIEL", "cuit": "20-21048854-6", "iva": "Responsable Inscripto", "dir": "DORIS GIULIANI 535", "loc": "RAFAELA - Santa Fe"}, {"nombre": "PEREZ SERGIO MAURICIO", "cuit": "20-25489853-9", "iva": "Responsable Inscripto", "dir": "RUTA 22 Y 40", "loc": "LAS LAJAS - Neuquen"}, {"nombre": "PEÑA, DEBORA PRISCILA", "cuit": "27-37424959-8", "iva": "Monotributista", "dir": "NAHUEL HUAPI 64", "loc": "MORENO - Buenos Aires"}, {"nombre": "PINTOS, FRANCISCO JAVIER", "cuit": "20-34453010-7", "iva": "Monotributista", "dir": "AV 117 7965", "loc": "POSADAS - Misiones"}, {"nombre": "POGLIOTTI & POGLIOTTI CONSTRUCCIONES S.A", "cuit": "30-70986231-2", "iva": "Responsable Inscripto", "dir": "MEXICO 318", "loc": "VILLA MARIA - Cordoba"}, {"nombre": "PONCE, SEBASTIÁN JUVENAL", "cuit": "20-27468433-0", "iva": "Responsable Inscripto", "dir": "Antonio Torres 14 piso 1 of 5", "loc": "VILLA DOLORES - Cordoba"}, {"nombre": "PROTECCION TOTAL PATAGONICA S.R.L.", "cuit": "30-71444245-3", "iva": "Responsable Inscripto", "dir": "RUTA 40 KM 2218 Piso:1 Dpto:6", "loc": "SAN MARTIN DE LOS ANDES - Neuquen"}, {"nombre": "PROVEEDOR S.A", "cuit": "30-71308150-3", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 987", "loc": "CORRIENTES - Corrientes"}, {"nombre": "PS DATA S.A", "cuit": "30-70941470-0", "iva": "Responsable Inscripto", "dir": "SARAZA 563", "loc": "CIUDAD DE BS. AS. - Buenos Aires"}, {"nombre": "PUJOL LEANDRO", "cuit": "", "iva": "Consumidor Final", "dir": "Av. Libertador 170", "loc": "BERNARDO DE IRIGOYEN - Misiones"}, {"nombre": "PUJOL, EMILIANO", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "PULSAR DISEÑO Y TECNOLOGIA S.R.L.", "cuit": "30-71821716-0", "iva": "Responsable Inscripto", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "QUINT ALBERTO JAVIER", "cuit": "20-36565821-9", "iva": "Responsable Inscripto", "dir": "CORRIENTES Y PJE. FATIMA", "loc": "RIO GALLEGOS - Santa Cruz"}, {"nombre": "QUIROGA, NATALIA", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "RADIODIFUSORA CHAJARI S.A.", "cuit": "30-59860527-7", "iva": "Responsable Inscripto", "dir": "PABLO STAMPA 2430", "loc": "CHAJARI - Entre Rios"}, {"nombre": "RAMIREZ FULVIO LEONEL", "cuit": "20-17906617-4", "iva": "Monotributista", "dir": "M4 P7 B COOPERACION", "loc": "VILLA ANGELA - Chaco"}, {"nombre": "RED SOFT SOLUCIONES INFORMATICAS S.A.S", "cuit": "30-71674151-2", "iva": "Responsable Inscripto", "dir": "", "loc": "CHIMBAS - San Juan"}, {"nombre": "RED UNO SRL", "cuit": "30-71440378-4", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 502", "loc": "PUERTO MADRYN - Chubut"}, {"nombre": "REDES DE OESTE S.A", "cuit": "33-71187588-9", "iva": "Responsable Inscripto", "dir": "", "loc": "MENDOZA - Mendoza"}, {"nombre": "REIGEMBORN GUSTAVO JAVIER", "cuit": "20-30583315-1", "iva": "Responsable Inscripto", "dir": "", "loc": "JUAN JOSE CASTELLI - Chaco"}, {"nombre": "RIO COLORADO TELEVISION SA", "cuit": "30-70725955-4", "iva": "Responsable Inscripto", "dir": "SARMIENTO 299", "loc": "RIO COLORADO - Rio Negro"}, {"nombre": "RIPOLL OMAR ANSELMO", "cuit": "20-12037057-0", "iva": "Responsable Inscripto", "dir": "", "loc": "FIRMAT - Santa Fe"}, {"nombre": "ROCHA LUIS DARDO", "cuit": "20-27348437-0", "iva": "Responsable Inscripto", "dir": "CALLE 6", "loc": "VILLA PARQUE SANTA ANA - Cordoba"}, {"nombre": "RODRIGUEZ DARIO GUILLERMO", "cuit": "20-23465169-3", "iva": "Responsable Inscripto", "dir": "FLORIDA 58", "loc": "CERRITO - Entre Rios"}, {"nombre": "RODRIGUEZ FABIO RUBEN", "cuit": "23-20662172-9", "iva": "Responsable Inscripto", "dir": "PASAJE CARLOS BENUSSI 100", "loc": "EL MOLLAR - Tucuman"}, {"nombre": "RODRIGUEZ LOPEZ HERNAN ESTEBAN", "cuit": "20-27059173-7", "iva": "Responsable Inscripto", "dir": "CALLE DIAS VELEZ 444", "loc": "SALTA - Salta"}, {"nombre": "RODRIGUEZ MARTINEZ JOSE NICOLAS", "cuit": "20-31643118-7", "iva": "Responsable Inscripto", "dir": "GRAL ACHA SUR 1037", "loc": "SAN JUAN - San Juan"}, {"nombre": "RZ NET S.A.", "cuit": "30-71695962-3", "iva": "Responsable Inscripto", "dir": "OLAVARRIA 37", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SAGUIR MARCOS JUAN", "cuit": "20-28764329-3", "iva": "Responsable Inscripto", "dir": "MITRE 5667", "loc": "BARRANQUITAS - Santa Fe"}, {"nombre": "SALERNO, ELDA ELBA", "cuit": "27-18027912-7", "iva": "Responsable Inscripto", "dir": "VIEYTES 2", "loc": "CABILDO - Buenos Aires"}, {"nombre": "SALINAS ERIKA NOELIA", "cuit": "27-32231600-9", "iva": "Responsable Inscripto", "dir": "Esmeralda 356 piso 5 dto 17", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "SALTA COMUNICA S. R. L.", "cuit": "30-71761815-3", "iva": "Responsable Inscripto", "dir": "MANZANA 21B LOTE 14", "loc": "CERRILLOS - Salta"}, {"nombre": "SAN NICOLAS INFORMATICA SRL", "cuit": "30-70948088-6", "iva": "Responsable Inscripto", "dir": "AV. SAVIO 65", "loc": "SAN NICOLAS - Buenos Aires"}, {"nombre": "SANCHEZ JUAN JOSE", "cuit": "20-17305562-6", "iva": "Monotributista", "dir": "CAROL ENGLISH 1825", "loc": "CALETA OLIVIA - Santa Cruz"}, {"nombre": "SANTANA ALFREDO MAMERTO", "cuit": "20-22941109-9", "iva": "Responsable Inscripto", "dir": "AV.M.BELGRANO 51", "loc": "GOBERNADOR GARMENDIA - Tucuman"}, {"nombre": "SANTINELLI LEANDRO CESAR", "cuit": "20-20818576-5", "iva": "Responsable Inscripto", "dir": "MITRE 854", "loc": "SAN GREGORIO - Santa Fe"}, {"nombre": "SCHAAP, PAULA NATALIA", "cuit": "27-39648283-0", "iva": "Responsable Inscripto", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SEDIGMEN", "cuit": "30-71670454-4", "iva": "Responsable Inscripto", "dir": "", "loc": "LAS HERAS - Mendoza"}, {"nombre": "SEGRUP ARGENTINA SRL", "cuit": "33-70633739-9", "iva": "Responsable Inscripto", "dir": "COCHABAMBA 1015", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SELECSA S.R.L", "cuit": "30-71138853-9", "iva": "Responsable Inscripto", "dir": "AV. SAN MARTIN 2244", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SERGIO PATRICIO LE PERA", "cuit": "20-33681931-9", "iva": "Responsable Inscripto", "dir": "AV. SOLIS 138", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SERVICARGAS MENDOZA S.A", "cuit": "30-70883962-7", "iva": "Responsable Inscripto", "dir": "ESPAÑA 1340 Piso:14 Dpto:9", "loc": "MENDOZA - Mendoza"}, {"nombre": "SETTEMBRI LUCIANO", "cuit": "20-29140527-5", "iva": "Responsable Inscripto", "dir": "WILDE 1350 UNIDAD 1", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SGC S.A.", "cuit": "30-70837710-0", "iva": "Responsable Inscripto", "dir": "ALSINA 997", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SHELLTRON S.A", "cuit": "30-71537505-9", "iva": "Responsable Inscripto", "dir": "ITALIA 590 PB DPTO 10", "loc": "PALMIRA - Mendoza"}, {"nombre": "SIEBEN SERGIO OVIDIO", "cuit": "20-32567637-0", "iva": "Responsable Inscripto", "dir": "INDEPENDENCIA 530", "loc": "JUAN JOSE CASTELLI - Chaco"}, {"nombre": "SILICA NETWORKS ARGENTINA S.A", "cuit": "30-70719317-0", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 638", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "SILLETA DARIO EZEQUIEL", "cuit": "20-33665495-6", "iva": "Responsable Inscripto", "dir": "ALEM 590", "loc": "TRENQUE LAUQUEN - Buenos Aires"}, {"nombre": "SILVESTRI, MAURICIO EMILIANO", "cuit": "20-33082379-9", "iva": "Responsable Inscripto", "dir": "NICOLAS MENDILUCE", "loc": "DIEGO DE ALVEAR - Santa Fe"}, {"nombre": "SINTURION, MARCELO CLAUDIO", "cuit": "20-20474069-1", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 853", "loc": "MONTES DE OCA - Santa Fe"}, {"nombre": "SOCIEDAD RURAL GENERAL GUIDO", "cuit": "30-70881860-3", "iva": "Responsable Inscripto", "dir": "SAN MARTIN 559", "loc": "GENERAL GUIDO - Buenos Aires"}, {"nombre": "SPRYNET S.R.L", "cuit": "30-71568543-0", "iva": "Responsable Inscripto", "dir": "ALBERDI JUAN B. AV. 893 Piso:5 Dpto:D", "loc": "ROSARIO - Santa Fe"}, {"nombre": "SUCESORES DE HEBERTO R. PIORNO S.R.L", "cuit": "30-71447359-6", "iva": "Responsable Inscripto", "dir": "MORENO 695 ESQ COLON", "loc": "AMERICA - Buenos Aires"}, {"nombre": "SURPORAIRE S.A.", "cuit": "30-71455807-9", "iva": "Responsable Inscripto", "dir": "CALLE 50 AMBAS VEREDAS", "loc": "LA PLATA - Buenos Aires"}, {"nombre": "Sistemax SRL", "cuit": "30-70797452-0", "iva": "Responsable Inscripto", "dir": "San Martín 3912", "loc": "VILLA CONSTITUCION - Buenos Aires"}, {"nombre": "TARCAYA ARIEL SANTIAGO", "cuit": "20-27875652-2", "iva": "Monotributista", "dir": "25 DE MAYO S/N", "loc": "AGUAS BLANCAS - Salta"}, {"nombre": "TEAMTEL S.A", "cuit": "30-71207271-3", "iva": "Responsable Inscripto", "dir": "JOSÉ MARMOL 776", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "TEBES, DIEGO GASTON", "cuit": "20-22992932-2", "iva": "Responsable Inscripto", "dir": "Av. Monseñor Dobler 30", "loc": "(3101) VALLE MARIA - Entre Rios"}, {"nombre": "TECNET ARGENTINA S.A", "cuit": "30-71475261-4", "iva": "Responsable Inscripto", "dir": "BUSTAMANTE 380", "loc": "ROSARIO - Santa Fe"}, {"nombre": "TECNO WIFI SRL", "cuit": "30-71280380-7", "iva": "Responsable Inscripto", "dir": "CENTENO 33", "loc": "SANTA ROSA - La Pampa"}, {"nombre": "TELE RED INTERNET S. R. L.", "cuit": "30-71858064-8", "iva": "Responsable Inscripto", "dir": "ARTURO JAURETCHE 7451", "loc": "ROSARIO - Santa Fe"}, {"nombre": "TELE SISTEMA S R L", "cuit": "30-68733650-6", "iva": "Responsable Inscripto", "dir": "AV JUJUY 428", "loc": "PERICO - Jujuy"}, {"nombre": "TELEAUDIO S.A", "cuit": "30-63395796-3", "iva": "Responsable Inscripto", "dir": "TUCUMAN 282", "loc": "LIBERTADOR GENERAL S - Jujuy"}, {"nombre": "TELERGIA", "cuit": "30-71644290-6", "iva": "Responsable Inscripto", "dir": "CORDOBA AV. 391 Piso:9 B", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "TELESERV BOLIVIA SRL", "cuit": "55-00000004-2", "iva": "Exento", "dir": "AV. EJERCITO NACIONAL 308", "loc": "SANTA CRUZ - Bolivia"}, {"nombre": "TELESISTEMA S.R.L.", "cuit": "30-70918451-9", "iva": "Responsable Inscripto", "dir": "TALCAHUANO 38 Piso:3", "loc": "ROSARIO - Santa Fe"}, {"nombre": "TELESMART S.A.", "cuit": "33-70795354-9", "iva": "Responsable Inscripto", "dir": "BAIGORRIA 3211 PISO 4 DEPTO A", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "TELEVISION POR CABLE SA", "cuit": "30-63928332-8", "iva": "Responsable Inscripto", "dir": "LIBERTADOR DEL AV. 6810 P10 A", "loc": "ROSARIO - Santa Fe"}, {"nombre": "TELEVISORA HERNANDARIAS COLOR S.R.L.", "cuit": "30-64781820-6", "iva": "Responsable Inscripto", "dir": "LA RIOJA 245", "loc": "HERNANDARIAS - Entre Rios"}, {"nombre": "TELISTEMA S.A.", "cuit": "30-70985832-3", "iva": "Responsable Inscripto", "dir": "ENTRE RIOS 50", "loc": "SAN ANTONIO PADUA - Buenos Aires"}, {"nombre": "TELVISO", "cuit": "30-57186735-0", "iva": "Responsable Inscripto", "dir": "Beruti 1381", "loc": "DEL VISO - Buenos Aires"}, {"nombre": "TERMAS VIDEO CABLE SRL", "cuit": "30-70728308-0", "iva": "Responsable Inscripto", "dir": "PROSPERO GARCIA 175", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "TOLEDO, MARCOS ALEXANDER", "cuit": "", "iva": "Consumidor Final", "dir": "TUPA AMARU 2165", "loc": "SAN FERNANDO - Buenos Aires"}, {"nombre": "TOME POSE HECTOR DONATO", "cuit": "20-14662299-3", "iva": "Monotributista", "dir": "", "loc": "GOBERNADOR ROCA - Misiones"}, {"nombre": "TOMEPOSE HECTOR DONATO", "cuit": "20-14662299-3", "iva": "Monotributista", "dir": "", "loc": "GOBERNADOR ROCA - Misiones"}, {"nombre": "TRES UVE DIGITAL S.A.S.", "cuit": "30-71687751-1", "iva": "Responsable Inscripto", "dir": "AV. JUAN VUCETICH 742", "loc": "RAWSON - Chubut"}, {"nombre": "TRIMAGLIO MARCOS GABRIEL", "cuit": "20-39632015-1", "iva": "Monotributista", "dir": "MATHEU 5475", "loc": "SANTA FE - Santa Fe"}, {"nombre": "TROMBETTA, LEONARDO DANIEL", "cuit": "20-26461189-0", "iva": "Responsable Inscripto", "dir": "JUAN DOMINGO PERON 2817", "loc": "VILLA GOBERNADOR GALVEZ - Santa Fe"}, {"nombre": "TRUCCO, CARLOS SANTIAGO", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "TV CABLE ITATI S.R.L.", "cuit": "30-71591142-2", "iva": "Responsable Inscripto", "dir": "", "loc": "ITATI - Corrientes"}, {"nombre": "TV CABLE VILLA CONCEPCION DEL TIO SRL", "cuit": "30-71534236-3", "iva": "Responsable Inscripto", "dir": "RECONQUISTA 344", "loc": "COL. SAN BARTOLOMÉ - Cordoba"}, {"nombre": "TVC 5 S.A", "cuit": "30-68658575-8", "iva": "Responsable Inscripto", "dir": "H. IRIGOYEN 332", "loc": "MAR DE AJÓ - Buenos Aires"}, {"nombre": "UDRIZAR SAUTHIER, FABIO", "cuit": "20-34024058-9", "iva": "Responsable Inscripto", "dir": "AV LIBERTAD 1232", "loc": "VILLA ELISA - Entre Rios"}, {"nombre": "UGALDE JUAN IGNACIO", "cuit": "20-28299403-9", "iva": "Responsable Inscripto", "dir": "MONTEVIDEO 955", "loc": "TANDIL - Buenos Aires"}, {"nombre": "URIEL SRL", "cuit": "33-71178907-9", "iva": "Responsable Inscripto", "dir": "SANTA FE 675", "loc": "SALTA - Salta"}, {"nombre": "UV MUNDO DIGITAL SRL", "cuit": "30-71508757-6", "iva": "Responsable Inscripto", "dir": "AV VUCETICH 742", "loc": "RAWSON - Chubut"}, {"nombre": "Union del Sud Cooperativa", "cuit": "30-62662581-5", "iva": "Responsable Inscripto", "dir": "Av. Martinez de Hoz y Calle 71", "loc": "MAR DEL PLATA - Buenos Aires"}, {"nombre": "V.C.C.B. SRL", "cuit": "33-70921115-9", "iva": "Responsable Inscripto", "dir": "MITRE 742", "loc": "CORONEL BRANDSEN - Buenos Aires"}, {"nombre": "VALCATEL S.R.L", "cuit": "30-71669280-5", "iva": "Responsable Inscripto", "dir": "", "loc": "TAFI VIRJO - Tucuman"}, {"nombre": "VARAS, ALEJANDRA PAOLA", "cuit": "27-33463502-9", "iva": "Responsable Inscripto", "dir": "GENERAL VILLEGAS ESTE 561", "loc": "MALARGUE - Mendoza"}, {"nombre": "VASCONI IVAN GONZALO", "cuit": "20-32389828-7", "iva": "Responsable Inscripto", "dir": "San Martín S/N", "loc": "LOS BARRIALES - Mendoza"}, {"nombre": "VAZQUEZ, PABLO HORACIO", "cuit": "20-27505003-3", "iva": "Responsable Inscripto", "dir": "zona urbana", "loc": "LAS PALMAS - Chaco"}, {"nombre": "VELAZCO ALCIDES", "cuit": "", "iva": "Consumidor Final", "dir": "", "loc": "LAS PALMAS - Chaco"}, {"nombre": "VELCOM SRL", "cuit": "30-71698618-3", "iva": "Responsable Inscripto", "dir": "AV. FRANCIA 1597 5B", "loc": "ROSARIO - Santa Fe"}, {"nombre": "VENADO VISION S.A", "cuit": "30-70842779-5", "iva": "Responsable Inscripto", "dir": "CASEY 245", "loc": "VENADO TUERTO - Santa Fe"}, {"nombre": "VIDEO CABLE TOTAL S.A.", "cuit": "30-70782630-0", "iva": "Responsable Inscripto", "dir": "DIEGO DE ALVEAR 289", "loc": "TEODELINA - Santa Fe"}, {"nombre": "VILCHES, VICTOR HUGO", "cuit": "20-13115154-4", "iva": "Responsable Inscripto", "dir": "RUTA NACIONAL 101 KM 24", "loc": "SAN ANTONIO - Misiones"}, {"nombre": "VILLA DIGITAL SRL", "cuit": "33-71711614-9", "iva": "Responsable Inscripto", "dir": "AV SAN MARTIN 1568", "loc": "VILLA CONSTITUCION - Santa Fe"}, {"nombre": "VILLAGRAN WALTER FEDERICO", "cuit": "20-31771584-7", "iva": "Responsable Inscripto", "dir": "17 DE OCTUBRE", "loc": "HUALFIN - Catamarca"}, {"nombre": "VILLANEDA ALEJANDRO JAVIER", "cuit": "20-26767587-3", "iva": "Responsable Inscripto", "dir": "VENEZUELA 663, EL TALAR 1618", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "VILLANUEVA ALEJANDRO JAVIER", "cuit": "20-26767587-3", "iva": "Responsable Inscripto", "dir": "VENEZUELA 663", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "VILLAREAL HERNAN SALVADOR", "cuit": "20-27167848-8", "iva": "Responsable Inscripto", "dir": "CALLE 2 134", "loc": "GENERAL PICO - La Pampa"}, {"nombre": "VILLARREAL, NORA DEL VALLE", "cuit": "23-11708667-4", "iva": "Responsable Inscripto", "dir": "LAS HERAS 1960", "loc": "SAN M. DE TUCUMAN - Tucuman"}, {"nombre": "VIRASORO VIDEO CABLE S.R.L.", "cuit": "30-71725807-6", "iva": "Responsable Inscripto", "dir": "ARTURO NAVAJAS 266", "loc": "GOB. ING. V. VIRASORO - Corrientes"}, {"nombre": "WABCOM S.A.S.", "cuit": "30-71643298-6", "iva": "Responsable Inscripto", "dir": "JULIO TORT 2900", "loc": "RESISTENCIA - Chaco"}, {"nombre": "WAIDELICH IRIS", "cuit": "27-17089953-4", "iva": "Responsable Inscripto", "dir": "GRAL GUEMES ESQ ALBERDI", "loc": "APOLINARIO SARAVIA - Salta"}, {"nombre": "WAIRA COMUNICACIONES SA", "cuit": "30-71701982-9", "iva": "Responsable Inscripto", "dir": "HIPOLITO YRIGOYEN 516 Piso:5 Dpto:E", "loc": "QUILMES - Buenos Aires"}, {"nombre": "WAVE NETWORKS S. A. S.", "cuit": "30-71783377-1", "iva": "Responsable Inscripto", "dir": "9 DE JULIO 3527", "loc": "MENDOZA - Mendoza"}, {"nombre": "WEINZIERL MAURICIO JAVIER", "cuit": "20-25351632-2", "iva": "Responsable Inscripto", "dir": "GUEMES 31", "loc": "BUENOS AIRES - Buenos Aires"}, {"nombre": "WEISHEIM VILLAGRA WALTER ELIAS", "cuit": "20-39260669-7", "iva": "Monotributista", "dir": "EVA PERON 13", "loc": "HERNANDARIAS - Entre Rios"}, {"nombre": "WI-NET S.A.S.", "cuit": "30-71622246-9", "iva": "Responsable Inscripto", "dir": "LOS AROMOS 368", "loc": "PEREZ - Santa Fe"}, {"nombre": "WICORP S.A.", "cuit": "33-71199093-9", "iva": "Responsable Inscripto", "dir": "PARAGUAY 1416", "loc": "ROSARIO - Santa Fe"}, {"nombre": "WIFLY S.A.", "cuit": "30-71594305-7", "iva": "Responsable Inscripto", "dir": "RIVADAVIA 90", "loc": "(5515) MAIPU - Mendoza"}, {"nombre": "WIRCOM ARGENTINA S.A.", "cuit": "30-70868233-7", "iva": "Responsable Inscripto", "dir": "AV MONTES DE OCA 251 P5", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "WISNIACKI MARTIN", "cuit": "20-39372895-8", "iva": "Responsable Inscripto", "dir": "ALBERDI JUAN B. AV. 2315 Piso:12", "loc": "CAPITAL FEDERAL - Buenos Aires"}, {"nombre": "ZAISER, CARLOS DANIEL", "cuit": "20-32746119-3", "iva": "Responsable Inscripto", "dir": "", "loc": "ROSARIO - Santa Fe"}, {"nombre": "ZE.NET WISP SRL", "cuit": "30-71441447-6", "iva": "Responsable Inscripto", "dir": "POZO 121", "loc": "LOMAS DE ZAMORA - Buenos Aires"}, {"nombre": "ZURAKOSKI NICOLAS", "cuit": "20-26353281-4", "iva": "Monotributista", "dir": "MOSCONI 83 Piso:1 Dpto:101", "loc": "PUERTO MADRYN - Chubut"}];
+
+function getClientesStorage() {
+  try {
+    const data = localStorage.getItem('conectorizar_clientes');
+    const saved = data ? JSON.parse(data) : [];
+    // Merge: preloaded + saved (saved takes priority if same nombre)
+    const merged = [...CLIENTES_PRELOADED];
+    saved.forEach(s => {
+      const idx = merged.findIndex(m => m.nombre.toLowerCase() === s.nombre.toLowerCase());
+      if (idx >= 0) merged[idx] = s;
+      else merged.push(s);
+    });
+    return merged.sort((a,b) => a.nombre.localeCompare(b.nombre));
+  } catch(e) { return CLIENTES_PRELOADED; }
+}
+
+function saveClienteStorage(cliente) {
+  try {
+    const data = localStorage.getItem('conectorizar_clientes');
+    const saved = data ? JSON.parse(data) : [];
+    const idx = saved.findIndex(c => c.nombre.toLowerCase() === cliente.nombre.toLowerCase());
+    if (idx >= 0) saved[idx] = cliente;
+    else saved.push(cliente);
+    localStorage.setItem('conectorizar_clientes', JSON.stringify(saved));
+  } catch(e) {}
+}
+
+function buscarCliente() {
+  const q = document.getElementById('cli-nombre').value.trim().toLowerCase();
+  const dd = document.getElementById('cli-dropdown');
+  if (q.length < 1) { dd.classList.remove('open'); return; }
+  const clientes = getClientesStorage();
+  const results = clientes.filter(c => c.nombre.toLowerCase().includes(q)).slice(0, 8);
+  if (results.length === 0) { dd.classList.remove('open'); return; }
+  dd.innerHTML = results.map((c, i) => `
+    <div class="dropdown-item" onclick="seleccionarCliente(${i})">
+      <div class="item-code">${c.nombre}</div>
+      <div class="item-desc">${c.cuit ? 'CUIT: ' + c.cuit + ' · ' : ''}${c.loc}</div>
+    </div>
+  `).join('');
+  // Store results temporarily
+  dd._results = results;
+  dd.classList.add('open');
+}
+
+function seleccionarCliente(idx) {
+  const dd = document.getElementById('cli-dropdown');
+  const c = dd._results[idx];
+  document.getElementById('cli-nombre').value = c.nombre;
+  document.getElementById('cli-cuit').value = c.cuit || '';
+  document.getElementById('cli-iva').value = c.iva || 'Responsable Inscripto';
+  document.getElementById('cli-dir').value = c.dir || '';
+  document.getElementById('cli-loc').value = c.loc || '';
+  dd.classList.remove('open');
+  showToast('Cliente cargado ✓');
+}
+
+function guardarClienteActual() {
+  const nombre = document.getElementById('cli-nombre').value.trim();
+  if (!nombre) { showToast('Ingresá el nombre del cliente primero'); return; }
+  const c = {
+    nombre,
+    cuit: document.getElementById('cli-cuit').value.trim(),
+    iva:  document.getElementById('cli-iva').value,
+    dir:  document.getElementById('cli-dir').value.trim(),
+    loc:  document.getElementById('cli-loc').value.trim(),
+  };
+  saveClienteStorage(c);
+  showToast('Cliente guardado ✓');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.cli-search-wrap')) {
+    const dd = document.getElementById('cli-dropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>
